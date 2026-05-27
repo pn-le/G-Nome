@@ -70,6 +70,7 @@ def _load_scoring_file(pgs_id: str) -> pd.DataFrame | None:
         if path.exists():
             df = pd.read_csv(path, sep="\t", comment="#")
             col_map = {}
+            has_hm_chr = any(c.lower() == "hm_chr" for c in df.columns)
             for col in df.columns:
                 low = col.lower()
                 if low in ("rsid", "snp_id"):
@@ -80,9 +81,13 @@ def _load_scoring_file(pgs_id: str) -> pd.DataFrame | None:
                     col_map[col] = "effect_allele"
                 elif low in ("effect_weight", "weight", "beta"):
                     col_map[col] = "weight"
-                elif low in ("chr_name", "hm_chr"):
+                elif low == "hm_chr":
                     col_map[col] = "chrom"
-                elif low in ("chr_position", "hm_pos"):
+                elif low == "hm_pos":
+                    col_map[col] = "pos"
+                elif low == "chr_name" and not has_hm_chr:
+                    col_map[col] = "chrom"
+                elif low == "chr_position" and not has_hm_chr:
                     col_map[col] = "pos"
             df = df.rename(columns=col_map)
 
