@@ -28,9 +28,16 @@ backend/models/
 *.bin
 *.safetensors
 
-# PGS scoring files (large — download via script)
+# Large dataset files (download via script)
 backend/data/pgs_scores/*.txt
 backend/data/pgs_scores/*.gz
+backend/data/cpic/diplotypes.json
+backend/data/cpic/recommendations.json
+backend/data/cpic/genes.json
+backend/data/cpic/drugs.json
+backend/data/cpic/gene_drug_pairs.json
+backend/data/pharmgkb/
+backend/data/clinvar/variant_summary*
 
 # Claude-flow artifacts
 .claude-flow/
