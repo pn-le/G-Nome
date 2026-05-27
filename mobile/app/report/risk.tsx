@@ -66,8 +66,8 @@ export default function RiskTab() {
               </View>
 
               <EquityBadge
-                ancestry={adj.population_used}
-                confidence={adj.confidence}
+                ancestryCode={0}
+                ancestryLabel={adj.population_used}
               />
 
               <Text style={styles.adjNote}>{adj.note}</Text>

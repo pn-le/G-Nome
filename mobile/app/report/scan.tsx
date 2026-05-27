@@ -101,7 +101,7 @@ export default function ScanTab() {
 
               {selfieResult.equity_note && (
                 <View style={{ marginTop: 8 }}>
-                  <EquityBadge ancestry="Non-European" />
+                  <EquityBadge ancestryCode={0} ancestryLabel="Non-European" />
                   <Text style={styles.equityNote}>{selfieResult.equity_note}</Text>
                 </View>
               )}
