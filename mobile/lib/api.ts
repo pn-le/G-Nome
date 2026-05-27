@@ -1,12 +1,20 @@
+import { Platform } from "react-native";
+
 const API_BASE = __DEV__ ? "http://localhost:8000" : "http://localhost:8000";
+
+async function appendFile(fd: FormData, key: string, uri: string, name: string, mime: string) {
+  if (Platform.OS === "web") {
+    const r = await fetch(uri);
+    const blob = await r.blob();
+    fd.append(key, new File([blob], name, { type: mime }));
+  } else {
+    fd.append(key, { uri, name, type: mime } as any);
+  }
+}
 
 export async function parseFile(fileUri: string, fileName: string): Promise<ParseResult> {
   const formData = new FormData();
-  formData.append("file", {
-    uri: fileUri,
-    name: fileName,
-    type: "text/plain",
-  } as any);
+  await appendFile(formData, "file", fileUri, fileName, "text/plain");
 
   const res = await fetch(`${API_BASE}/api/parse`, {
     method: "POST",
@@ -32,11 +40,7 @@ export async function getReport(sessionId: string): Promise<ReportResult> {
 
 export async function analyzeSelfie(sessionId: string, imageUri: string): Promise<any> {
   const formData = new FormData();
-  formData.append("image", {
-    uri: imageUri,
-    name: "selfie.jpg",
-    type: "image/jpeg",
-  } as any);
+  await appendFile(formData, "image", imageUri, "selfie.jpg", "image/jpeg");
 
   const res = await fetch(`${API_BASE}/api/cv/selfie?session_id=${sessionId}`, {
     method: "POST",
@@ -49,11 +53,7 @@ export async function analyzeSelfie(sessionId: string, imageUri: string): Promis
 
 export async function analyzeSkin(sessionId: string, imageUri: string): Promise<any> {
   const formData = new FormData();
-  formData.append("image", {
-    uri: imageUri,
-    name: "skin.jpg",
-    type: "image/jpeg",
-  } as any);
+  await appendFile(formData, "image", imageUri, "skin.jpg", "image/jpeg");
 
   const res = await fetch(`${API_BASE}/api/cv/skin?session_id=${sessionId}`, {
     method: "POST",
