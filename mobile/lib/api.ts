@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { ParseResult, ReportResult } from './types';
+import { ParseResult, ReportResult, CulturalRecommendations } from './types';
 import { API_BASE_URL } from './config';
 
 async function readErrorBody(res: Response): Promise<string> {
@@ -95,4 +95,60 @@ export async function generateMealPlan(sessionId: string): Promise<string> {
   if (!res.ok) throw new Error('Plan failed');
   const data = await res.json();
   return data.plan;
+}
+
+export async function getCulturalRecommendations(
+  parseResult: { ancestry?: Record<string, number>; session_id?: string; source?: string; snp_count?: number; chromosomes?: number },
+  report: ReportResult,
+  culture: string,
+): Promise<CulturalRecommendations> {
+  // Build the payload shape the backend expects (matches schemas.SAMPLE_PAYLOAD)
+  const payload = {
+    parse: {
+      source: parseResult.source ?? 'Unknown',
+      ancestry: parseResult.ancestry ?? {},
+      snp_count: parseResult.snp_count ?? 0,
+      session_id: parseResult.session_id ?? '',
+      chromosomes: parseResult.chromosomes ?? 0,
+    },
+    report: {
+      report_text: report.report_text,
+      disease_risk: report.disease_risk,
+      carrier_status: report.carrier_status,
+    },
+  };
+
+  // Extract flagged drugs + metabolizer status from PGX data
+  const flaggedDrugs: string[] = [];
+  const metabolizerStatus: Record<string, string> = {};
+  for (const gene of report.pharmacogenomics?.genes ?? []) {
+    if (gene.metabolizer_status) {
+      metabolizerStatus[gene.gene] = gene.metabolizer_status;
+    }
+    for (const flag of gene.drug_flags ?? []) {
+      if (!flaggedDrugs.includes(flag.drug)) {
+        flaggedDrugs.push(flag.drug);
+      }
+    }
+  }
+
+  const body = {
+    payload,
+    culture,
+    flagged_drugs: flaggedDrugs,
+    metabolizer_status: metabolizerStatus,
+  };
+
+  console.log(`[api] getCulturalRecommendations culture=${culture} base=${API_BASE_URL}`);
+
+  const res = await fetch(`${API_BASE_URL}/api/cultural-recommendations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Cultural recommendations failed (${res.status}): ${await readErrorBody(res)}`);
+  }
+  return (await res.json()) as CulturalRecommendations;
 }

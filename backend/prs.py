@@ -295,12 +295,16 @@ def compute_risk_scores(snps: pd.DataFrame, ancestry: dict, sex: str = "Unknown"
     # 3. Call inference
     ml_results = predict_user_risk(user_snps, ml_ancestry_int)
     
-    for disease_name, ml_result in ml_results.items():
+    for ml_result in ml_results.results:
+        disease_name = ml_result.disease
+        risk_probability = ml_result.risk_score
+        driving_factors = ml_result.top_driving_snps
+
         # ML models output raw probabilistic risk (e.g., 0.001 to 0.999).
         # We use our stable deterministic hash fallback to map this accurately to a realistic
         # percentile (2nd to 98th), just like we do for standard Polygenic Risk Scores.
         import hashlib
-        score_str = f"{disease_name}_{ml_result['risk_probability']:.5f}"
+        score_str = f"{disease_name}_{risk_probability:.5f}"
         hash_val = int(hashlib.md5(score_str.encode()).hexdigest(), 16)
         
         # Determine pseudo-random but strictly deterministic Z-score
@@ -326,12 +330,12 @@ def compute_risk_scores(snps: pd.DataFrame, ancestry: dict, sex: str = "Unknown"
             "label": f"{disease_name} (ML Enhanced)",
             "description": "Risk prediction powered by an Elastic Net Machine Learning model.",
             "status": "computed",
-            "raw_score": ml_result["risk_probability"],
+            "raw_score": risk_probability,
             "percentile": round(risk_pct, 1),
             "risk_tier": ml_risk_tier,
             "risk_label": ml_risk_label,
-            "driving_factors": ml_result["driving_factors"],
-            "snps_matched": len(ml_result["driving_factors"]),
+            "driving_factors": driving_factors,
+            "snps_matched": len(driving_factors),
             "snps_total": 50,
             "coverage_pct": 100.0,
             "ancestry_adjustment": {

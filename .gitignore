@@ -46,4 +46,7 @@ backend/sessions/
 .claude-flow/
 .claude/
 
-cultural_rag/
+# Cultural RAG — ignore large corpus data only, not source code
+cultural_rag/data/
+cultural_rag/__pycache__/
+cultural_rag/*/__pycache__/

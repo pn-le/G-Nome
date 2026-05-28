@@ -10,9 +10,10 @@ import ScanScreen from './ScanScreen';
 import ProfileScreen from './ProfileScreen';
 import ChatScreen from './ChatScreen';
 import PlanScreen from './PlanScreen';
+import CulturalPlanScreen from './CulturalPlanScreen';
 import { TabKey } from './BottomNav';
 
-type AppScreen = 'upload' | 'processing' | 'main' | 'chat' | 'plan';
+type AppScreen = 'upload' | 'processing' | 'main' | 'chat' | 'plan' | 'cultural';
 
 function AppInner() {
   const { error, reset } = useApp();
@@ -60,6 +61,7 @@ function AppInner() {
               onTabPress={handleTabPress} 
               onOpenChat={() => setAppScreen('chat')}
               onOpenPlan={() => setAppScreen('plan')}
+              onOpenCultural={() => setAppScreen('cultural')}
             />
           )}
           {activeTab === 'tree' && (
@@ -83,6 +85,10 @@ function AppInner() {
 
       {appScreen === 'plan' && (
         <PlanScreen onBack={() => setAppScreen('main')} />
+      )}
+
+      {appScreen === 'cultural' && (
+        <CulturalPlanScreen onBack={() => setAppScreen('main')} />
       )}
     </View>
   );
