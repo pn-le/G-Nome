@@ -5,25 +5,12 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/inria-serif';
 import { parseFile } from './lib/api';
 import { useApp } from './lib/AppContext';
-import { getPastSessions, PastSession } from './lib/storage';
-import { ScrollView } from 'react-native';
-
-const C = {
-  bg:            '#F7F6F2',
-  surface:       '#FFFFFF',
-  textPrimary:   '#1A1B14',
-  textSecondary: '#686760',
-  textLight:     '#A1A199',
-  green:         '#44A353',
-  olive:         '#363E28',
-  lightOlive:    '#DAE4CF',
-  lightGreen:    '#EEF2E9',
-};
+import { colors, radius } from './constants/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-
 const ACCEPTED_TYPES = ['text/plain', 'text/csv', 'application/zip', 'application/x-zip-compressed', '*/*'];
 
 interface Props {
@@ -38,7 +25,14 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
   const [parsing, setParsing]               = useState(false);
   const [errorMsg, setErrorMsg]             = useState<string | null>(null);
   const [buttonScale]                       = useState(new Animated.Value(1));
-  const [fontsLoaded]                       = useFonts({ PlayfairDisplay_700Bold });
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold,
+    InriaSerif_400Regular,
+    InriaSerif_700Bold,
+  });
+
+  const serif     = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
+  const serifBold = fontsLoaded ? 'InriaSerif_700Bold'    : undefined;
 
   React.useEffect(() => {
     getPastSessions().then(setPastSessions);
@@ -70,15 +64,11 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
       setParsing(true);
       setErrorMsg(null);
 
-      console.log(`[Upload] picked file: ${asset.name}  uri: ${asset.uri}`);
-
       try {
         const parsed = await parseFile(asset.uri, asset.name, (asset as any).file ?? undefined);
-        console.log('[Upload] parse success:', parsed);
         setParseResult(parsed);
         setTimeout(onFileSelected, 300);
       } catch (err: any) {
-        console.error('[Upload] parse error:', err);
         setParsing(false);
         const msg: string = err?.message ?? 'Unknown error';
         setErrorMsg(msg);
@@ -92,83 +82,127 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
   const handleWhatIsThis = useCallback(() => {
     Alert.alert(
       'About G-Nome',
-      'G-Nome turns your raw DNA data file into a personalised genomic health passport.\n\nWe support exports from 23andMe and AncestryDNA. Your file stays private — processing happens locally in the app.',
+      'G-Nome turns your raw DNA data file into a personalised genomic health passport.\n\nWe support exports from 23andMe and AncestryDNA. Your file stays private — processing happens on-device.',
       [{ text: 'Got it' }],
     );
   }, []);
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
+      {/* ── Logo ─────────────────────────────────────────────────────── */}
       <View style={styles.logoArea}>
         <Text style={[styles.logoText, fontsLoaded && styles.logoTextFont]}>G-Nome</Text>
-        <Text style={styles.tagline}>Your genome. Your story.{'\n'}Your Legacy</Text>
+        <Text style={[styles.tagline, { fontFamily: serif }]}>
+          Your genome. Your story.{'\n'}Your Legacy
+        </Text>
       </View>
 
+      {/* ── Illustration ──────────────────────────────────────────────── */}
       <Image
         source={require('./assets/images/gnome_img.png')}
         style={styles.gnomeImage}
         resizeMode="contain"
       />
 
-      <View style={styles.card}>
-        <View style={styles.iconWrapper}>
-          <View style={styles.iconBg}>
-            <View style={styles.arrowShaft} />
-            <View style={styles.arrowHeadLeft} />
-            <View style={styles.arrowHeadRight} />
+      {/* ── Upload Card ───────────────────────────────────────────────── */}
+      {/* Outer wrapper holds the shadow; inner card holds the dashed border */}
+      <View style={styles.cardShadow}>
+        <View style={styles.card}>
+
+          {/* DNA Upload Icon */}
+          <View style={styles.iconWrapper}>
+            <View style={styles.iconBg}>
+              <View style={styles.arrowShaft} />
+              <View style={styles.arrowHeadLeft} />
+              <View style={styles.arrowHeadRight} />
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.uploadTitle}>Upload your DNA file</Text>
-        <Text style={styles.uploadSubtitle}>23andMe or AncestryDNA</Text>
-        <Text style={styles.fileTypes}>TXT  ·  CSV  ·  ZIP</Text>
+          <Text style={[styles.uploadTitle, { fontFamily: serifBold }]}>
+            Upload your DNA file
+          </Text>
 
-        {pickedFileName && (
-          <View style={[styles.selectedFileRow, errorMsg ? styles.selectedFileRowError : null]}>
-            {parsing ? (
-              <ActivityIndicator size="small" color={C.green} />
-            ) : errorMsg ? (
-              <Text style={styles.errorDot}>✕</Text>
-            ) : (
-              <View style={styles.checkCircle}>
-                <Text style={styles.checkMark}>✓</Text>
-              </View>
-            )}
-            <Text style={[styles.selectedFileName, errorMsg ? { color: '#C73838' } : null]} numberOfLines={1}>
-              {parsing ? `Parsing ${pickedFileName}…` : pickedFileName}
-            </Text>
-          </View>
-        )}
-
-        {errorMsg && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText} numberOfLines={5}>{errorMsg}</Text>
-          </View>
-        )}
-
-        <Animated.View style={{ transform: [{ scale: buttonScale }], width: '100%' }}>
-          <TouchableOpacity
-            style={[styles.chooseButton, pickedFileName && !parsing && styles.chooseButtonDone]}
-            onPress={handleChooseFile}
-            activeOpacity={0.85}
-            disabled={parsing}
-          >
-            {parsing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.chooseButtonText}>
-                {pickedFileName ? 'Change File' : 'Choose File'}
+          {/* Source chips */}
+          <View style={styles.sourceChipsRow}>
+            <View style={[styles.sourceChip, { backgroundColor: colors.purpleBg }]}>
+              <Text style={[styles.sourceChipText, { fontFamily: serifBold, color: colors.purple }]}>
+                23andMe
               </Text>
-            )}
+            </View>
+            <View style={[styles.sourceChip, { backgroundColor: colors.blueBg }]}>
+              <Text style={[styles.sourceChipText, { fontFamily: serifBold, color: colors.blue }]}>
+                AncestryDNA
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[styles.fileTypes, { fontFamily: serif }]}>TXT  ·  CSV  ·  ZIP</Text>
+          <Text style={[styles.dragHint, { fontFamily: serif }]}>or drag & drop your file here</Text>
+
+          {/* Selected file feedback */}
+          {pickedFileName && (
+            <View style={[styles.selectedFileRow, errorMsg ? styles.selectedFileRowError : null]}>
+              {parsing ? (
+                <ActivityIndicator size="small" color={colors.green} />
+              ) : errorMsg ? (
+                <Text style={styles.errorDot}>✕</Text>
+              ) : (
+                <View style={styles.checkCircle}>
+                  <Text style={styles.checkMark}>✓</Text>
+                </View>
+              )}
+              <Text
+                style={[styles.selectedFileName, { fontFamily: serifBold }, errorMsg ? { color: '#C73838' } : null]}
+                numberOfLines={1}
+              >
+                {parsing ? `Parsing ${pickedFileName}…` : pickedFileName}
+              </Text>
+            </View>
+          )}
+
+          {errorMsg && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText} numberOfLines={5}>{errorMsg}</Text>
+            </View>
+          )}
+
+          {/* Choose File button */}
+          <Animated.View style={{ transform: [{ scale: buttonScale }], width: '100%' }}>
+            <TouchableOpacity
+              style={[styles.chooseButton, pickedFileName && !parsing && styles.chooseButtonDone]}
+              onPress={handleChooseFile}
+              activeOpacity={0.85}
+              disabled={parsing}
+            >
+              {parsing ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.chooseButtonText, { fontFamily: serifBold }]}>
+                  {pickedFileName ? 'Change File' : 'Choose File'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Trust signals */}
+          <View style={styles.trustRow}>
+            <View style={styles.trustItem}>
+              <Text style={styles.trustIcon}>🔒</Text>
+              <Text style={[styles.trustText, { fontFamily: serif }]}>Your data stays private</Text>
+            </View>
+            <View style={styles.trustDivider} />
+            <View style={styles.trustItem}>
+              <Text style={styles.trustIcon}>🛡</Text>
+              <Text style={[styles.trustText, { fontFamily: serif }]}>Encrypted</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity onPress={handleWhatIsThis} hitSlop={{ top: 12, bottom: 12, left: 20, right: 20 }}>
+            <Text style={[styles.whatIsThis, { fontFamily: serif }]}>What is this?</Text>
           </TouchableOpacity>
-        </Animated.View>
-
-
-        <TouchableOpacity onPress={handleWhatIsThis} hitSlop={{ top: 12, bottom: 12, left: 20, right: 20 }}>
-          <Text style={styles.whatIsThis}>What is this?</Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       {pastSessions.length > 0 && (
@@ -216,106 +250,120 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg, alignItems: 'center' },
+  root: { flex: 1, backgroundColor: colors.bg, alignItems: 'center' },
 
   logoArea: { alignItems: 'center', marginTop: 16 },
-  logoText: { fontSize: 38, fontWeight: '700', color: C.olive },
+  logoText: { fontSize: 38, fontWeight: '700', color: colors.olive },
   logoTextFont: { fontFamily: 'PlayfairDisplay_700Bold' },
-  tagline: { fontSize: 14, color: C.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: 2, fontStyle: 'italic' },
+  tagline: {
+    fontSize: 13, color: colors.textSecondary, textAlign: 'center',
+    lineHeight: 20, marginTop: 2, fontStyle: 'italic',
+  },
 
-  gnomeImage: { width: SCREEN_W * 0.65, height: 238, marginTop: 6 },
+  gnomeImage: { width: SCREEN_W * 0.62, height: 200, marginTop: 6 },
 
-  card: {
+  // Shadow lives here (no border); dashed border lives on the inner card
+  cardShadow: {
     width: SCREEN_W - 40,
-    backgroundColor: C.surface,
-    borderRadius: 16,
-    marginTop: 10,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 28,
-    alignItems: 'center',
+    marginTop: 12,
+    borderRadius: radius.card + 3,
+    backgroundColor: colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 6,
   },
+  card: {
+    borderRadius: radius.card + 3,
+    borderWidth: 1.5,
+    borderColor: colors.olive,
+    borderStyle: 'dashed',
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 24,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
 
-  iconWrapper: { marginBottom: 14 },
+  iconWrapper: { marginBottom: 12 },
   iconBg: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: C.lightOlive,
+    backgroundColor: colors.greenSoft,
     alignItems: 'center', justifyContent: 'center',
   },
   arrowShaft: {
     position: 'absolute', width: 2.5, height: 14,
-    backgroundColor: C.green, borderRadius: 2, bottom: 13,
+    backgroundColor: colors.green, borderRadius: 2, bottom: 13,
   },
   arrowHeadLeft: {
     position: 'absolute', width: 7, height: 2.5,
-    backgroundColor: C.green, borderRadius: 2,
+    backgroundColor: colors.green, borderRadius: 2,
     top: 12, left: 11, transform: [{ rotate: '-45deg' }],
   },
   arrowHeadRight: {
     position: 'absolute', width: 7, height: 2.5,
-    backgroundColor: C.green, borderRadius: 2,
+    backgroundColor: colors.green, borderRadius: 2,
     top: 12, right: 11, transform: [{ rotate: '45deg' }],
   },
 
-  uploadTitle: { fontSize: 14, fontWeight: '600', color: C.textPrimary, textAlign: 'center' },
-  uploadSubtitle: { fontSize: 11, color: C.textSecondary, textAlign: 'center', marginTop: 6 },
-  fileTypes: { fontSize: 10, color: C.textLight, textAlign: 'center', marginTop: 4, letterSpacing: 1 },
+  uploadTitle: {
+    fontSize: 14, color: colors.textPrimary,
+    textAlign: 'center', marginBottom: 10,
+  },
+
+  sourceChipsRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  sourceChip:    { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
+  sourceChipText: { fontSize: 11 },
+
+  fileTypes: {
+    fontSize: 10, color: colors.textLight,
+    textAlign: 'center', letterSpacing: 1.5,
+  },
+  dragHint: {
+    fontSize: 9, color: colors.textLight,
+    marginTop: 4, marginBottom: 4,
+  },
 
   selectedFileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.lightGreen,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 14,
-    width: '100%',
-    gap: 10,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.greenLightBg, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    marginTop: 12, width: '100%', gap: 10,
   },
-  selectedFileRowError: {
-    backgroundColor: '#FEF1F1',
-  },
-  errorDot: {
-    fontSize: 13,
-    color: '#C73838',
-    fontWeight: '700',
-    width: 24,
-    textAlign: 'center',
-  },
-  errorBanner: {
-    backgroundColor: '#FEF1F1',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#C73838',
-    padding: 10,
-    marginTop: 8,
-    width: '100%',
-  },
-  errorText: {
-    fontSize: 10,
-    color: '#C73838',
-    lineHeight: 15,
-  },
+  selectedFileRowError: { backgroundColor: colors.redBg },
+  errorDot: { fontSize: 13, color: '#C73838', fontWeight: '700', width: 24, textAlign: 'center' },
   checkCircle: {
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: C.green, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center',
   },
   checkMark: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  selectedFileName: { fontSize: 12, fontWeight: '600', color: C.textPrimary, flex: 1 },
+  selectedFileName: { fontSize: 12, color: colors.textPrimary, flex: 1 },
+
+  errorBanner: {
+    backgroundColor: colors.redBg, borderRadius: 8,
+    borderLeftWidth: 3, borderLeftColor: '#C73838',
+    padding: 10, marginTop: 8, width: '100%',
+  },
+  errorText: { fontSize: 10, color: '#C73838', lineHeight: 15 },
 
   chooseButton: {
-    width: '100%', height: 46, backgroundColor: C.olive,
-    borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 18,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.10, shadowRadius: 10, elevation: 4,
+    width: '100%', height: 48, backgroundColor: colors.olive,
+    borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
+    marginTop: 16,
   },
-  chooseButtonDone: { backgroundColor: C.green },
-  chooseButtonText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  chooseButtonDone: { backgroundColor: colors.green },
+  chooseButtonText: { fontSize: 14, color: '#FFFFFF' },
 
-  whatIsThis: { fontSize: 11, color: C.green, marginTop: 16 },
+  trustRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 14, gap: 10,
+  },
+  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trustIcon: { fontSize: 11 },
+  trustText:  { fontSize: 9, color: colors.textSecondary },
+  trustDivider: { width: 1, height: 12, backgroundColor: colors.border },
+
+  whatIsThis: { fontSize: 11, color: colors.green, marginTop: 12 },
 });

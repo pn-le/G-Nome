@@ -18,24 +18,31 @@ def _get_client() -> AsyncOpenAI | None:
         )
     return _client
 
-async def get_embedding(text: str) -> list[float]:
-    """Generate a 4096-dimensional embedding using Qwen3-Embedding-8B."""
+async def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
+    """Generate 4096-dimensional embeddings for a batch of strings in one API call."""
     client = _get_client()
-    if not client:
+    if not client or not texts:
         return []
     
     # Replace newlines as recommended for embeddings
-    text = text.replace("\n", " ")
+    clean_texts = [text.replace("\n", " ") for text in texts]
     
     try:
         response = await client.embeddings.create(
             model="Qwen/Qwen3-Embedding-8B",
-            input=[text]
+            input=clean_texts
         )
-        return response.data[0].embedding
+        # Ensure they are sorted by the original input index
+        sorted_data = sorted(response.data, key=lambda x: x.index)
+        return [item.embedding for item in sorted_data]
     except Exception as e:
-        print(f"Error generating embedding: {e}")
+        print(f"Error generating embeddings batch: {e}")
         return []
+
+async def get_embedding(text: str) -> list[float]:
+    """Generate a 4096-dimensional embedding using Qwen3-Embedding-8B."""
+    embeddings = await get_embeddings_batch([text])
+    return embeddings[0] if embeddings else []
 
 async def embed_and_store_report(session_id: str, user_id: str, full_report: dict, report_text: str):
     """Chunk the generated report and store embeddings in Supabase."""
@@ -73,18 +80,27 @@ async def embed_and_store_report(session_id: str, user_id: str, full_report: dic
 
     print(f"Storing {len(chunks)} RAG chunks for session {session_id}...")
     
-    for chunk in chunks:
-        embedding = await get_embedding(chunk)
-        if embedding:
-            try:
-                sb.table("document_chunks").insert({
-                    "session_id": session_id,
-                    "user_id": user_id,
-                    "content": chunk,
-                    "embedding": embedding
-                }).execute()
-            except Exception as e:
-                print(f"Warning: RAG insert failed: {e}")
+    if not chunks:
+        return
+        
+    embeddings = await get_embeddings_batch(chunks)
+    
+    if embeddings and len(embeddings) == len(chunks):
+        rows_to_insert = []
+        for chunk, embedding in zip(chunks, embeddings):
+            rows_to_insert.append({
+                "session_id": session_id,
+                "user_id": user_id,
+                "content": chunk,
+                "embedding": embedding
+            })
+            
+        try:
+            sb.table("document_chunks").insert(rows_to_insert).execute()
+        except Exception as e:
+            print(f"Warning: RAG bulk insert failed: {e}")
+    else:
+        print("Warning: Failed to generate embeddings for chunks.")
 
 async def rag_search(session_id: str, query: str) -> str:
     """Find relevant chunks for a user query."""

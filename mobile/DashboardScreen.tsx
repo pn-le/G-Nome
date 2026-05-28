@@ -5,34 +5,20 @@ import {
 } from 'react-native';
 import { useFonts } from 'expo-font';
 import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/inria-serif';
+import { IBMPlexMono_400Regular, IBMPlexMono_700Bold } from '@expo-google-fonts/ibm-plex-mono';
 import BottomNav, { TabKey } from './BottomNav';
 import { useApp } from './lib/AppContext';
 import { RiskCondition } from './lib/types';
-import { getLifestylePlan } from './lib/api';
-
-const C = {
-  bg:            '#F7F6F2',
-  surface:       '#FFFFFF',
-  textPrimary:   '#1A1B14',
-  textSecondary: '#686760',
-  textLight:     '#A6A59F',
-  green:         '#44A353',
-  olive:         '#363E28',
-  red:           '#EB412A',
-  amber:         '#F5A62B',
-  border:        '#E5E2DB',
-  lightGreen:    '#EEF2E9',
-};
+import { colors, radius, shadow } from './constants/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// Badge color from risk tier
 function riskAccent(tier?: string): string {
   switch (tier) {
-    case 'high':     return C.red;
-    case 'moderate': return C.amber;
-    case 'low':      return '#4A90F9';
-    default:         return C.green;
+    case 'high':     return colors.red;
+    case 'moderate': return colors.amber;
+    case 'low':      return colors.blue;
+    default:         return colors.green;
   }
 }
 
@@ -47,14 +33,6 @@ function riskBadgeLabel(tier?: string, label?: string): string {
   }
 }
 
-const REPORT_TABS: { key: number; accent: string }[] = [
-  { key: 0, accent: C.amber  },
-  { key: 1, accent: C.red    },
-  { key: 2, accent: C.red    },
-  { key: 3, accent: '#4A90F9'},
-  { key: 4, accent: C.green  },
-];
-
 interface Props {
   onOpenReport?: (tab: number) => void;
   onTabPress?: (tab: TabKey) => void;
@@ -64,79 +42,66 @@ interface Props {
   onOpenCultural?: () => void;
 }
 
-export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, onOpenPlan, onOpenCultural }: Props) {
-  const [fontsLoaded] = useFonts({ InriaSerif_400Regular, InriaSerif_700Bold });
-  const { report, parseResult, healthScore, dominantAncestry, sessionId } = useApp();
+export default function DashboardScreen({
+  onOpenReport, onTabPress, onOpenChat, onOpenPlan, onOpenCultural,
+}: Props) {
+  const [fontsLoaded] = useFonts({
+    InriaSerif_400Regular,
+    InriaSerif_700Bold,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_700Bold,
+  });
+
+  const { report, parseResult, healthScore, dominantAncestry } = useApp();
 
   const serif     = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
   const serifBold = fontsLoaded ? 'InriaSerif_700Bold'    : undefined;
+  const mono      = fontsLoaded ? 'IBMPlexMono_400Regular': undefined;
 
-  // Saved plan preview
-  const [savedPlan, setSavedPlan] = useState<string | null>(null);
-  const [planDate, setPlanDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!sessionId) return;
-    (async () => {
-      try {
-        const res = await getLifestylePlan(sessionId);
-        if (res.plan) {
-          setSavedPlan(res.plan);
-          setPlanDate(res.created_at ? new Date(res.created_at).toLocaleDateString() : null);
-        }
-      } catch {}
-    })();
-  }, [sessionId]);
-
-  // — Derived data —
   const conditions = report?.disease_risk.conditions ?? [];
   const computedConditions = conditions.filter(c => c.status === 'computed' && c.percentile != null);
-
-  // Top priority = highest percentile (most at risk)
   const topPriority: RiskCondition | null =
     computedConditions.length > 0
       ? [...computedConditions].sort((a, b) => (b.percentile ?? 0) - (a.percentile ?? 0))[0]
       : null;
 
   const topPercentile = topPriority?.percentile ?? 72;
-
-  const pgx    = report?.pharmacogenomics;
-  const carrier = report?.carrier_status;
-  const traits  = report?.nutrition_traits;
+  const pgx     = report?.pharmacogenomics;
+  const carrier  = report?.carrier_status;
+  const traits   = report?.nutrition_traits;
+  const source   = parseResult?.source ?? 'DNA file';
+  const snpCount = parseResult?.snp_count;
 
   const reportRows = [
-    { label: 'Drugs',    subtitle: pgx    ? `${pgx.summary.genes_tested} genes tested`          : '—', accent: C.amber,   tab: 0 },
-    { label: 'Risk',     subtitle: pgx    ? `${computedConditions.length} conditions assessed`   : '—', accent: C.red,     tab: 1 },
-    { label: 'Carrier',  subtitle: carrier ? `${carrier.conditions_tested} conditions screened`  : '—', accent: '#9966FE', tab: 2 },
-    { label: 'Traits',   subtitle: traits  ? `${traits.total_tested} traits analyzed`            : '—', accent: '#4A90F9', tab: 3 },
-    { label: 'Ancestry', subtitle: dominantAncestry !== 'Unknown' ? dominantAncestry            : '—', accent: C.green,   tab: 4 },
+    { label: 'Drug Interactions', icon: '💊', subtitle: pgx    ? `${pgx.summary.genes_tested} genes tested`          : 'Pharmacogenomics', accent: colors.amber,  tab: 0 },
+    { label: 'Disease Risk',      icon: '🧬', subtitle: pgx    ? `${computedConditions.length} conditions assessed`   : 'Ancestry-adjusted', accent: colors.red,    tab: 1 },
+    { label: 'Carrier Status',    icon: '🔬', subtitle: carrier ? `${carrier.conditions_tested} conditions screened`  : 'Genetic variants',  accent: colors.purple, tab: 2 },
+    { label: 'Nutrition & Traits',icon: '🥗', subtitle: traits  ? `${traits.total_tested} traits analyzed`            : 'Food & lifestyle',  accent: colors.blue,   tab: 3 },
+    { label: 'Ancestry',          icon: '🌍', subtitle: dominantAncestry !== 'Unknown' ? dominantAncestry            : 'Composition',       accent: colors.green,  tab: 4 },
   ];
-
-  const source = parseResult?.source ?? 'DNA file';
-  const snpCount = parseResult?.snp_count;
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* ── Header ──────────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────── */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { fontFamily: serifBold }]}>Good morning, Alex</Text>
-            {snpCount && (
-              <Text style={[styles.subGreeting, { fontFamily: serif }]}>
+            {snpCount ? (
+              <Text style={[styles.subGreeting, { fontFamily: mono }]}>
                 {snpCount.toLocaleString()} SNPs · {source}
               </Text>
-            )}
+            ) : null}
           </View>
           <Image source={require('./assets/images/small gene tree.png')} style={styles.leafDecor} resizeMode="contain" />
         </View>
 
-        {/* ── Health Score card ───────────────────────────────────────── */}
-        <View style={styles.card}>
-          <Text style={[styles.sectionLabel, { fontFamily: serif }]}>Your Health Score</Text>
+        {/* ── Health Score ────────────────────────────────────────────── */}
+        <View style={[styles.card, shadow.card]}>
+          <Text style={[styles.sectionLabel, { fontFamily: serif }]}>HEALTH SCORE</Text>
           <View style={styles.scoreRow}>
             <Text style={[styles.scoreNum, { fontFamily: serifBold }]}>{healthScore}</Text>
             <Text style={[styles.scoreOf,  { fontFamily: serif }]}> /100</Text>
@@ -146,16 +111,27 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
             {dominantAncestry !== 'Unknown' ? ` · ${dominantAncestry} ancestry` : ''}
           </Text>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${healthScore}%` }]} />
-            <View style={[styles.barDot,  { left: `${healthScore}%`, marginLeft: -5.5 }]} />
+            <View style={[styles.barFill, { width: `${healthScore}%` as any }]} />
+            <View style={[styles.barDot,  { left: `${healthScore}%` as any, marginLeft: -5.5 }]} />
+          </View>
+        </View>
+
+        {/* ── Equity Callout ─────────────────────────────────────────── */}
+        <View style={styles.equityBanner}>
+          <Text style={styles.equityIcon}>🌍</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.equityTitle, { fontFamily: serifBold }]}>Ancestry-Adjusted Scores</Text>
+            <Text style={[styles.equityBody, { fontFamily: serif }]}>
+              Every risk score corrects for{dominantAncestry !== 'Unknown' ? ` ${dominantAncestry}` : ' multi-ancestry'} population weights — addressing the 78–80% European data bias in genomic research.
+            </Text>
           </View>
         </View>
 
         {/* ── Top Priority ────────────────────────────────────────────── */}
-        <Text style={[styles.sectionHeader, { fontFamily: serifBold }]}>Top Priority</Text>
+        <Text style={[styles.sectionHeader, { fontFamily: serifBold }]}>TOP PRIORITY</Text>
 
         {topPriority ? (
-          <TouchableOpacity style={styles.priorityCard} onPress={() => onOpenReport?.(1)} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.priorityCard, shadow.card]} onPress={() => onOpenReport?.(1)} activeOpacity={0.8}>
             <View style={[styles.accentBar, { backgroundColor: riskAccent(topPriority.risk_tier) }]} />
             <View style={styles.priorityContent}>
               <View style={styles.priorityTopRow}>
@@ -174,17 +150,12 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
               <Text style={[styles.priorityRisk, { fontFamily: serifBold }]}>
                 {topPriority.percentile?.toFixed(0)}th percentile risk
               </Text>
-              {topPriority.ancestry_adjustment?.note ? (
-                <Text style={[styles.priorityNote, { fontFamily: serif }]}>
-                  {topPriority.ancestry_adjustment.note}
-                </Text>
-              ) : null}
               <Text style={[styles.priorityLink, { fontFamily: serif }]}>See full report →</Text>
             </View>
           </TouchableOpacity>
         ) : (
-          <View style={styles.priorityCard}>
-            <View style={[styles.accentBar, { backgroundColor: C.green }]} />
+          <View style={[styles.priorityCard, shadow.card]}>
+            <View style={[styles.accentBar, { backgroundColor: colors.green }]} />
             <View style={styles.priorityContent}>
               <Text style={[styles.geneName, { fontFamily: serifBold }]}>No high-risk findings</Text>
               <Text style={[styles.priorityDesc, { fontFamily: serif }]}>
@@ -194,31 +165,36 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
           </View>
         )}
 
-        {/* ── AI Features ─────────────────────────────────────────── */}
-        <Text style={[styles.sectionHeader, { fontFamily: serifBold, marginTop: 14 }]}>AI Assistant</Text>
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
-          <TouchableOpacity style={[styles.priorityCard, { flex: 1, marginBottom: 0, height: 80 }]} onPress={onOpenChat} activeOpacity={0.8}>
-            <View style={[styles.accentBar, { backgroundColor: C.olive }]} />
-            <View style={{ padding: 12, justifyContent: 'center' }}>
-              <Text style={[styles.geneName, { fontFamily: serifBold, marginBottom: 4 }]}>Ask Your DNA</Text>
-              <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Chat with AI</Text>
-            </View>
+        {/* ── AI Assistant ────────────────────────────────────────────── */}
+        <Text style={[styles.sectionHeader, { fontFamily: serifBold, marginTop: 14 }]}>AI ASSISTANT</Text>
+        <View style={styles.aiRow}>
+          {/* Ask Your DNA — olive */}
+          <TouchableOpacity style={[styles.aiCard, { backgroundColor: colors.olive }]} onPress={onOpenChat} activeOpacity={0.82}>
+            <Text style={styles.aiCardIcon}>🧬</Text>
+            <Text style={[styles.aiCardTitle, { fontFamily: serifBold }]}>Ask Your DNA</Text>
+            <Text style={[styles.aiCardSub,   { fontFamily: serif }]}>Chat with AI</Text>
+            <Text style={styles.aiCardArrow}>→</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.priorityCard, { flex: 1, marginBottom: 0, height: 80 }]} onPress={onOpenPlan} activeOpacity={0.8}>
-            <View style={[styles.accentBar, { backgroundColor: C.green }]} />
-            <View style={{ padding: 12, justifyContent: 'center' }}>
-              <Text style={[styles.geneName, { fontFamily: serifBold, marginBottom: 4 }]}>7-Day Plan</Text>
-              <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Personalized meals</Text>
-            </View>
+          {/* 7-Day Plan — green */}
+          <TouchableOpacity style={[styles.aiCard, { backgroundColor: '#1E6B35' }]} onPress={onOpenPlan} activeOpacity={0.82}>
+            <Text style={styles.aiCardIcon}>📅</Text>
+            <Text style={[styles.aiCardTitle, { fontFamily: serifBold }]}>7-Day Plan</Text>
+            <Text style={[styles.aiCardSub,   { fontFamily: serif }]}>Personalized meals</Text>
+            <Text style={styles.aiCardArrow}>→</Text>
           </TouchableOpacity>
 
         </View>
-        {/* Cultural Nutrition button */}
-        <TouchableOpacity style={[styles.priorityCard, { marginBottom: 14, height: 80 }]} onPress={onOpenCultural} activeOpacity={0.8}>
-          <View style={[styles.accentBar, { backgroundColor: '#0D9488' }]} />
-          <View style={{ padding: 12, justifyContent: 'center', flex: 1 }}>
-            <Text style={[styles.geneName, { fontFamily: serifBold, marginBottom: 4 }]}>🌏  Cultural Nutrition</Text>
-            <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Cuisine-aware food recs from your DNA</Text>
+
+        {/* Cultural Nutrition — teal */}
+        <TouchableOpacity style={[styles.culturalCard, shadow.card]} onPress={onOpenCultural} activeOpacity={0.82}>
+          <View style={[styles.accentBar, { backgroundColor: colors.teal }]} />
+          <View style={styles.culturalInner}>
+            <Text style={styles.culturalIcon}>🌏</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.culturalTitle, { fontFamily: serifBold }]}>Cultural Nutrition</Text>
+              <Text style={[styles.culturalSub, { fontFamily: serif }]}>Cuisine-aware food recs from your DNA</Text>
+            </View>
+            <Text style={[styles.chevron, { fontFamily: serif }]}>›</Text>
           </View>
         </TouchableOpacity>
 
@@ -240,10 +216,9 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
         )}
 
         {/* ── Explore Reports ─────────────────────────────────────────── */}
+        <Text style={[styles.sectionHeader, { fontFamily: serifBold, marginTop: 14 }]}>EXPLORE YOUR REPORTS</Text>
 
-        <Text style={[styles.sectionHeader, { fontFamily: serifBold }]}>Explore Your Reports</Text>
-
-        <View style={styles.reportsCard}>
+        <View style={[styles.reportsCard, shadow.card]}>
           {reportRows.map((item, i) => (
             <TouchableOpacity
               key={item.label}
@@ -252,7 +227,9 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
               onPress={() => onOpenReport?.(item.tab)}
             >
               <View style={[styles.reportAccent, { backgroundColor: item.accent }]} />
-              <View style={[styles.reportIcon, { backgroundColor: item.accent }]} />
+              <View style={[styles.reportIconBubble, { backgroundColor: item.accent + '22' }]}>
+                <Text style={styles.reportIconEmoji}>{item.icon}</Text>
+              </View>
               <View style={styles.reportLabels}>
                 <Text style={[styles.reportTitle, { fontFamily: serifBold }]}>{item.label}</Text>
                 <Text style={[styles.reportSubtitle, { fontFamily: serif }]}>{item.subtitle}</Text>
@@ -262,7 +239,7 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
           ))}
         </View>
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
 
       <BottomNav activeTab="home" onTabPress={onTabPress ?? (() => {})} />
@@ -271,56 +248,84 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 },
 
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  greeting: { fontSize: 23, color: C.textPrimary },
-  subGreeting: { fontSize: 10, color: C.textSecondary, marginTop: 2 },
-  leafDecor: { width: 48, height: 48, opacity: 0.85 },
+  greeting:   { fontSize: 22, color: colors.textPrimary },
+  subGreeting: { fontSize: 10, color: colors.textSecondary, marginTop: 3 },
+  leafDecor:  { width: 48, height: 48, opacity: 0.85 },
 
   card: {
-    backgroundColor: C.surface, borderRadius: 13, padding: 14, marginBottom: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 14, elevation: 3,
+    backgroundColor: colors.surface, borderRadius: radius.card, padding: 14, marginBottom: 14,
   },
-  sectionLabel: { fontSize: 10, color: C.textSecondary, marginBottom: 4 },
+  sectionLabel: { fontSize: 9, color: colors.textLight, marginBottom: 4, letterSpacing: 0.6 },
   scoreRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 2 },
-  scoreNum: { fontSize: 38, color: C.textPrimary, lineHeight: 44 },
-  scoreOf:  { fontSize: 15, color: C.textSecondary, marginBottom: 6 },
-  percentile: { fontSize: 10, color: C.textSecondary, marginBottom: 10 },
-  barTrack: { height: 6, backgroundColor: C.border, borderRadius: 3, position: 'relative' },
-  barFill:  { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: C.green, borderRadius: 3 },
-  barDot:   { position: 'absolute', top: -3, width: 11, height: 11, borderRadius: 6, backgroundColor: C.green },
+  scoreNum: { fontSize: 40, color: colors.textPrimary, lineHeight: 46 },
+  scoreOf:  { fontSize: 15, color: colors.textSecondary, marginBottom: 8 },
+  percentile: { fontSize: 10, color: colors.textSecondary, marginBottom: 10 },
+  barTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, position: 'relative' },
+  barFill:  { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: colors.green, borderRadius: 3 },
+  barDot:   { position: 'absolute', top: -3, width: 11, height: 11, borderRadius: 6, backgroundColor: colors.green },
 
-  sectionHeader: { fontSize: 10, color: C.textSecondary, marginBottom: 8, letterSpacing: 0.2 },
+  // Equity callout
+  equityBanner: {
+    backgroundColor: colors.greenLightBg,
+    borderRadius: radius.card, padding: 12, marginBottom: 14,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    borderWidth: 1, borderColor: colors.greenSoft,
+  },
+  equityIcon:  { fontSize: 18, marginTop: 1 },
+  equityTitle: { fontSize: 11, color: colors.olive, marginBottom: 3 },
+  equityBody:  { fontSize: 9,  color: colors.textSecondary, lineHeight: 14 },
+
+  sectionHeader: { fontSize: 9, color: colors.textLight, marginBottom: 8, letterSpacing: 0.6 },
 
   priorityCard: {
-    backgroundColor: C.surface, borderRadius: 11, flexDirection: 'row',
+    backgroundColor: colors.surface, borderRadius: radius.card, flexDirection: 'row',
     marginBottom: 14, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 11, elevation: 3,
   },
   accentBar: { width: 4 },
   priorityContent: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
   priorityTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 5, gap: 8 },
-  geneName: { fontSize: 13, color: C.textPrimary, flex: 1, flexWrap: 'wrap' },
-  riskBadge: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
+  geneName:   { fontSize: 13, color: colors.textPrimary, flex: 1, flexWrap: 'wrap' },
+  riskBadge:  { borderRadius: radius.badge, paddingHorizontal: 7, paddingVertical: 3, flexShrink: 0 },
   riskBadgeText: { color: '#fff', fontSize: 8, letterSpacing: 0.3 },
-  priorityDesc: { fontSize: 10, color: C.textSecondary, marginBottom: 3 },
-  priorityRisk: { fontSize: 10, color: C.red, marginBottom: 2 },
-  priorityNote: { fontSize: 9, color: C.textSecondary, marginBottom: 3, fontStyle: 'italic' },
-  priorityLink: { fontSize: 10, color: C.green },
+  priorityDesc: { fontSize: 10, color: colors.textSecondary, marginBottom: 3 },
+  priorityRisk: { fontSize: 10, color: colors.red, marginBottom: 4 },
+  priorityLink: { fontSize: 10, color: colors.green },
+
+  // AI cards
+  aiRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  aiCard: {
+    flex: 1, borderRadius: radius.card, padding: 14,
+    gap: 3, position: 'relative',
+  },
+  aiCardIcon:  { fontSize: 22, marginBottom: 4 },
+  aiCardTitle: { fontSize: 13, color: '#fff' },
+  aiCardSub:   { fontSize: 9,  color: 'rgba(255,255,255,0.75)' },
+  aiCardArrow: { position: 'absolute', right: 12, top: 14, fontSize: 16, color: 'rgba(255,255,255,0.6)' },
+
+  culturalCard: {
+    backgroundColor: colors.surface, borderRadius: radius.card,
+    flexDirection: 'row', marginBottom: 14, overflow: 'hidden',
+  },
+  culturalInner: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, gap: 10 },
+  culturalIcon:  { fontSize: 22 },
+  culturalTitle: { fontSize: 13, color: colors.textPrimary, marginBottom: 2 },
+  culturalSub:   { fontSize: 9, color: colors.textSecondary },
 
   reportsCard: {
-    backgroundColor: C.surface, borderRadius: 11, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    backgroundColor: colors.surface, borderRadius: radius.card, overflow: 'hidden', marginBottom: 0,
   },
-  reportRow: { flexDirection: 'row', alignItems: 'center', height: 52, paddingRight: 16, gap: 12 },
-  reportRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
-  reportAccent: { width: 4, alignSelf: 'stretch' },
-  reportIcon:   { width: 22, height: 22, borderRadius: 6 },
+  reportRow: { flexDirection: 'row', alignItems: 'center', height: 56, paddingRight: 14, gap: 10 },
+  reportRowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  reportAccent:  { width: 4, alignSelf: 'stretch' },
+  reportIconBubble: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  reportIconEmoji: { fontSize: 16 },
   reportLabels: { flex: 1 },
-  reportTitle:    { fontSize: 12, color: C.textPrimary, marginBottom: 2 },
-  reportSubtitle: { fontSize: 9,  color: C.textSecondary },
-  chevron: { fontSize: 18, color: C.textLight, marginTop: -2 },
+  reportTitle:    { fontSize: 12, color: colors.textPrimary, marginBottom: 2 },
+  reportSubtitle: { fontSize: 9,  color: colors.textSecondary },
+  chevron: { fontSize: 20, color: colors.textLight, marginTop: -1 },
 });
