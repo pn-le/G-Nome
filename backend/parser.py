@@ -56,11 +56,16 @@ def parse_dna_file(raw_bytes: bytes, filename: str) -> dict:
 
     # Try to extract ancestry from 23andMe header comments
     ancestry = _extract_ancestry(raw_bytes)
+    if not ancestry:
+        ancestry = _infer_ancestry_from_snps(df)
+        
+    sex = _infer_sex(df)
 
     return {
         "snps": df,
         "source": source,
         "ancestry": ancestry,
+        "sex": sex,
     }
 
 
@@ -95,3 +100,43 @@ def _parse_pct(line: str) -> float:
     if match:
         return float(match.group(1))
     return 0.0
+
+
+def _infer_sex(snps: pd.DataFrame) -> str:
+    """Infer sex by checking for Y chromosome SNPs."""
+    y_snps = snps[snps["chrom"].astype(str).str.upper() == "Y"]
+    valid_y = y_snps[y_snps["genotype"] != "--"]
+    # Usually a male will have hundreds of valid Y SNPs. A few could be false positives.
+    if len(valid_y) > 20:
+        return "Male"
+    return "Female"
+
+
+def _infer_ancestry_from_snps(snps: pd.DataFrame) -> dict:
+    """Fallback ancestry inference using Ancestry Informative Markers (AIMs)."""
+    lookup = dict(zip(snps["rsid"].str.lower(), snps["genotype"]))
+    scores = {"European": 0, "East Asian": 0, "African": 0, "South Asian": 0}
+    
+    # 1. European marker: rs1426654 (SLC24A5) A allele
+    slc = lookup.get("rs1426654", "").upper()
+    if slc:
+        scores["European"] += slc.count("A") * 40
+        scores["South Asian"] += slc.count("A") * 20
+        scores["African"] += slc.count("G") * 20
+        scores["East Asian"] += slc.count("G") * 20
+        
+    # 2. East Asian marker: rs3827760 (EDAR) G allele
+    edar = lookup.get("rs3827760", "").upper()
+    if edar:
+        scores["East Asian"] += edar.count("G") * 50
+        
+    # 3. African marker: rs2814778 (DARC) C allele
+    darc = lookup.get("rs2814778", "").upper()
+    if darc:
+        scores["African"] += darc.count("C") * 50
+        
+    total = sum(scores.values())
+    if total == 0:
+        return {}
+    
+    return {k: round((v / total) * 100, 1) for k, v in scores.items() if v > 0}

@@ -45,3 +45,5 @@ backend/sessions/
 # Claude-flow artifacts
 .claude-flow/
 .claude/
+
+cultural_rag/

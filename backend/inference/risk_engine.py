@@ -17,7 +17,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from ml.snp_config import (
+from ..ml.snp_config import (
     ALL_SNPS,
     DISEASES,
     DISEASE_DISPLAY_NAMES,
