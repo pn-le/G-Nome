@@ -9,51 +9,49 @@ DATA_DIR = Path(__file__).parent / "data"
 
 # --- Nutrition traits (hardcoded — NOT from HIrisPlex) ---
 
-NUTRITION_SNPS = {
+MULTI_SNP_TRAITS = {
     "caffeine_sensitivity": {
         "name": "Caffeine Sensitivity",
-        "rsid": "rs762551",
-        "gene": "CYP1A2",
-        "interpretations": {
-            "AA": {"status": "fast", "label": "Fast Metabolizer", "detail": "You process caffeine quickly. Standard coffee intake unlikely to cause jitteriness or sleep disruption."},
-            "AC": {"status": "slow", "label": "Slow Metabolizer", "detail": "You metabolize caffeine slowly. High intake may increase heart rate and disrupt sleep. Limit to 1-2 cups/day."},
-            "CA": {"status": "slow", "label": "Slow Metabolizer", "detail": "You metabolize caffeine slowly. High intake may increase heart rate and disrupt sleep. Limit to 1-2 cups/day."},
-            "CC": {"status": "slow", "label": "Slow Metabolizer", "detail": "You metabolize caffeine slowly. High intake may increase heart rate and disrupt sleep. Limit to 1-2 cups/day."},
+        "gene": "CYP1A2, AHR",
+        "snps": {
+            "rs762551": {"C": -1, "A": 1},
+            "rs2472297": {"T": -0.5, "C": 0.5},
+            "rs4410790": {"T": -0.5, "C": 0.5},
         },
+        "thresholds": [
+            (1, {"status": "fast", "label": "Fast Metabolizer", "detail": "You process caffeine quickly based on multi-gene analysis. Standard coffee intake is well tolerated."}),
+            (-99, {"status": "slow", "label": "Slow Metabolizer", "detail": "You metabolize caffeine slowly based on multi-gene analysis. High intake may increase heart rate. Limit to 1-2 cups/day."}),
+        ]
     },
     "lactose_tolerance": {
         "name": "Lactose Intolerance",
-        "rsid": "rs4988235",
-        "gene": "LCT",
-        "interpretations": {
-            "TT": {"status": "tolerant", "label": "Lactose Tolerant", "detail": "You likely produce lactase into adulthood. Dairy is generally well-tolerated."},
-            "CT": {"status": "tolerant", "label": "Likely Lactose Tolerant", "detail": "You likely produce lactase into adulthood. Dairy is generally well-tolerated."},
-            "TC": {"status": "tolerant", "label": "Likely Lactose Tolerant", "detail": "You likely produce lactase into adulthood. Dairy is generally well-tolerated."},
-            "CC": {"status": "intolerant", "label": "Likely Lactose Intolerant", "detail": "Reduced lactase activity likely. Consider limiting dairy or using lactase supplements."},
+        "gene": "LCT, MCM6",
+        "snps": {
+            "rs4988235": {"T": 2, "C": -2},
+            "rs182549": {"T": 1, "C": -1},
+            "rs41380347": {"T": 1, "C": -1},
         },
-    },
-    "alcohol_flush": {
-        "name": "Alcohol Flush Reaction",
-        "rsid": "rs671",
-        "gene": "ALDH2",
-        "interpretations": {
-            "GG": {"status": "normal", "label": "No Flush", "detail": "Normal alcohol metabolism. No genetic predisposition to flushing."},
-            "AG": {"status": "mild_flush", "label": "Mild Flush", "detail": "One ALDH2*2 variant. May experience mild flushing. Elevated cancer risk with heavy drinking."},
-            "GA": {"status": "mild_flush", "label": "Mild Flush", "detail": "One ALDH2*2 variant. May experience mild flushing. Elevated cancer risk with heavy drinking."},
-            "AA": {"status": "flush", "label": "Flush Response", "detail": "Two ALDH2*2 variants. Alcohol causes flushing, nausea, rapid heartbeat. Significantly elevated cancer risk."},
-        },
+        "thresholds": [
+            (1, {"status": "tolerant", "label": "Lactose Tolerant", "detail": "Multi-gene analysis shows you likely produce lactase into adulthood. Dairy is well-tolerated."}),
+            (-99, {"status": "intolerant", "label": "Likely Lactose Intolerant", "detail": "Multi-gene analysis shows reduced lactase activity. Consider limiting dairy."}),
+        ]
     },
     "vitamin_d": {
         "name": "Vitamin D Absorption",
-        "rsid": "rs2282679",
-        "gene": "GC",
-        "interpretations": {
-            "GG": {"status": "normal", "label": "Normal Absorption", "detail": "No genetic reduction in vitamin D transport. Standard sun exposure and diet typically sufficient."},
-            "GT": {"status": "slightly_reduced", "label": "Slightly Reduced", "detail": "Mild reduction in vitamin D transport. Consider moderate supplementation in low-sunlight months."},
-            "TG": {"status": "slightly_reduced", "label": "Slightly Reduced", "detail": "Mild reduction in vitamin D transport. Consider moderate supplementation in low-sunlight months."},
-            "TT": {"status": "reduced", "label": "Reduced Absorption", "detail": "Reduced vitamin D binding protein. Higher deficiency risk. Consider 1,000-2,000 IU daily supplement."},
+        "gene": "GC, VDR, CYP2R1",
+        "snps": {
+            "rs2282679": {"G": 1, "T": -1},
+            "rs10741657": {"G": 0.5, "A": -0.5},
+            "rs12785878": {"G": 0.5, "T": -0.5},
         },
-    },
+        "thresholds": [
+            (0, {"status": "normal", "label": "Normal Absorption", "detail": "Multi-gene analysis shows normal vitamin D synthesis and transport."}),
+            (-99, {"status": "reduced", "label": "Reduced Absorption", "detail": "Multi-gene analysis indicates reduced vitamin D binding/synthesis. Higher deficiency risk."}),
+        ]
+    }
+}
+
+NUTRITION_SNPS = {
     "folate_mthfr": {
         "name": "Folate Processing (MTHFR)",
         "rsid": "rs1801133",
@@ -81,7 +79,12 @@ NUTRITION_SNPS = {
 # --- Physical appearance predictions (from HIrisPlex-S) ---
 
 
-def _predict_eye_color(lookup: dict) -> dict:
+def _predict_eye_color(lookup: dict, ancestry: dict = None) -> dict:
+    if ancestry:
+        # Strong population prior for brown eyes in these populations
+        if ancestry.get("East Asian", 0) > 50 or ancestry.get("African", 0) > 50 or ancestry.get("South Asian", 0) > 50:
+            return {"result": "Brown", "gene": "Population Prior", "rsid": "Multiple", "genotype": "N/A"}
+
     herc2 = lookup.get("rs12913832", "GG").upper()
     oca2 = lookup.get("rs1800407", "CC").upper()
     irf4 = lookup.get("rs12203592", "CC").upper()
@@ -136,13 +139,13 @@ def _predict_skin_tone(lookup: dict) -> dict:
     return {"result": tone, "gene": "SLC24A5", "rsid": "rs1426654", "genotype": slc24a5}
 
 
-def analyze_traits(snps: pd.DataFrame) -> dict:
+def analyze_traits(snps: pd.DataFrame, ancestry: dict = None) -> dict:
     """Look up nutrition traits + physical appearance predictions."""
     lookup = dict(zip(snps["rsid"].str.lower(), snps["genotype"]))
 
     results = []
 
-    # Nutrition traits
+    # Single-SNP Nutrition traits
     for trait_key, config in NUTRITION_SNPS.items():
         rsid = config["rsid"]
         genotype = lookup.get(rsid.lower())
@@ -174,6 +177,46 @@ def analyze_traits(snps: pd.DataFrame) -> dict:
                 "genotype": genotype,
                 **interp,
             })
+
+    # Multi-SNP Nutrition traits
+    for trait_key, config in MULTI_SNP_TRAITS.items():
+        score = 0
+        snps_found = 0
+        for rsid, weights in config["snps"].items():
+            genotype = lookup.get(rsid.lower())
+            if genotype and genotype != "--":
+                for allele in genotype:
+                    score += weights.get(allele.upper(), 0)
+                snps_found += 1
+        
+        if snps_found == 0:
+            results.append({
+                "name": config["name"],
+                "category": "nutrition",
+                "gene": config["gene"],
+                "rsid": "Multiple",
+                "genotype": "N/A",
+                "status": "not_tested",
+                "label": "Not Tested",
+                "detail": "None of the required SNPs were found in your data file.",
+            })
+            continue
+
+        interp = None
+        for min_score, result in config["thresholds"]:
+            if score >= min_score:
+                interp = result
+                break
+
+        if interp:
+            results.append({
+                "name": config["name"],
+                "category": "nutrition",
+                "gene": config["gene"],
+                "rsid": "Multiple",
+                "genotype": "Polygenic",
+                **interp,
+            })
         else:
             results.append({
                 "name": config["name"],
@@ -188,7 +231,7 @@ def analyze_traits(snps: pd.DataFrame) -> dict:
 
     # Physical appearance (HIrisPlex-S)
     appearance = {
-        "eye_color": _predict_eye_color(lookup),
+        "eye_color": _predict_eye_color(lookup, ancestry),
         "hair_color": _predict_hair_color(lookup),
         "skin_tone": _predict_skin_tone(lookup),
     }

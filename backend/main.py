@@ -52,7 +52,7 @@ def _save_session_disk(session_id: str, session: dict):
     path = SESSIONS_DIR / session_id
     path.mkdir(exist_ok=True)
     session["snps"].to_parquet(path / "snps.parquet", index=False)
-    meta = {"ancestry": session.get("ancestry", {}), "source": session.get("source", "")}
+    meta = {"ancestry": session.get("ancestry", {}), "sex": session.get("sex", "Unknown"), "source": session.get("source", "")}
     (path / "meta.json").write_text(json.dumps(meta))
 
 
@@ -69,6 +69,7 @@ def _load_sessions_disk():
             sessions[p.name] = {
                 "snps": pd.read_parquet(snps_path),
                 "ancestry": meta.get("ancestry", {}),
+                "sex": meta.get("sex", "Unknown"),
                 "source": meta.get("source", ""),
             }
 
@@ -204,6 +205,7 @@ async def parse(file: UploadFile = File(...), authorization: str | None = Header
     session = {
         "snps": result["snps"],
         "ancestry": result.get("ancestry", {}),
+        "sex": result.get("sex", "Unknown"),
         "source": result["source"],
         "user_id": user_id,
     }
@@ -235,6 +237,7 @@ async def report(session_id: str, authorization: str | None = Header(None)):
     user_id = await _get_user_id(authorization) or session.get("user_id")
     snps = session["snps"]
     ancestry = session.get("ancestry", {})
+    sex = session.get("sex", "Unknown")
 
     if user_id:
         sb = get_supabase()
@@ -242,9 +245,9 @@ async def report(session_id: str, authorization: str | None = Header(None)):
             sb.table("sessions").update({"status": "processing"}).eq("id", session_id).execute()
 
     pgx = run_pharmacogenomics(snps)
-    risk = compute_risk_scores(snps, ancestry)
+    risk = compute_risk_scores(snps, ancestry, sex)
     carriers = check_carrier_status(snps)
-    nutrition = analyze_traits(snps)
+    nutrition = analyze_traits(snps, ancestry)
 
     modules = {
         "pharmacogenomics": pgx,

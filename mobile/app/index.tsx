@@ -121,6 +121,17 @@ export default function UploadScreen() {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         
+        {/* Top Navigation */}
+        <View style={styles.topNav}>
+          <TouchableOpacity 
+            onPress={() => router.push("/profile")}
+            style={styles.profileButton}
+          >
+            <Camera color={Colors.primary} size={20} />
+            <Text style={styles.profileButtonText}>Mii Studio</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Header Section */}
         <View style={styles.hero}>
           <Text style={styles.logo}>G-Nome</Text>
@@ -250,6 +261,28 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 24, paddingBottom: 60 },
   
+  topNav: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 8,
+  },
+  profileButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(45, 212, 191, 0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(45, 212, 191, 0.2)",
+    gap: 8,
+  },
+  profileButtonText: {
+    color: Colors.primary,
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
   hero: { alignItems: "center", marginTop: 24, marginBottom: 32 },
   logo: { fontSize: 36, fontWeight: "900", color: Colors.textPrimary, letterSpacing: 1 },
   tagline: { fontSize: 16, color: Colors.primary, marginTop: 4, fontWeight: "600", letterSpacing: 0.5 },
