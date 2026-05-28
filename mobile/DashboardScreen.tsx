@@ -72,6 +72,10 @@ export default function DashboardScreen({
   const source   = parseResult?.source ?? 'DNA file';
   const snpCount = parseResult?.snp_count;
 
+  // Plan reminder — not yet persisted; stub as null so the card stays hidden
+  const savedPlan: string | null = null as string | null;
+  const planDate:  string | null = null as string | null;
+
   const reportRows = [
     { label: 'Drug Interactions', icon: '💊', subtitle: pgx    ? `${pgx.summary.genes_tested} genes tested`          : 'Pharmacogenomics', accent: colors.amber,  tab: 0 },
     { label: 'Disease Risk',      icon: '🧬', subtitle: pgx    ? `${computedConditions.length} conditions assessed`   : 'Ancestry-adjusted', accent: colors.red,    tab: 1 },
@@ -201,7 +205,7 @@ export default function DashboardScreen({
         {/* ── Saved Plan Reminder ──────────────────────────────────────── */}
         {savedPlan && (
           <TouchableOpacity style={styles.priorityCard} onPress={onOpenPlan} activeOpacity={0.8}>
-            <View style={[styles.accentBar, { backgroundColor: C.green }]} />
+            <View style={[styles.accentBar, { backgroundColor: colors.green }]} />
             <View style={{ padding: 12, flex: 1 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <Text style={[styles.geneName, { fontFamily: serifBold }]}>📋 Your 7-Day Plan</Text>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image,
+  View, Text, StyleSheet, TouchableOpacity, Image, ScrollView,
   SafeAreaView, StatusBar, Alert, Animated, Dimensions, ActivityIndicator,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -9,6 +9,7 @@ import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/in
 import { parseFile } from './lib/api';
 import { useApp } from './lib/AppContext';
 import { colors, radius } from './constants/theme';
+import { PastSession, getPastSessions } from './lib/storage';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const ACCEPTED_TYPES = ['text/plain', 'text/csv', 'application/zip', 'application/x-zip-compressed', '*/*'];
@@ -207,13 +208,13 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
 
       {pastSessions.length > 0 && (
         <View style={{ width: SCREEN_W - 40, marginTop: 20 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textSecondary, marginBottom: 10 }}>Recent Records</Text>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textSecondary, marginBottom: 10 }}>Recent Records</Text>
           <ScrollView style={{ maxHeight: 200 }}>
             {pastSessions.map(session => (
               <TouchableOpacity
                 key={session.id}
                 style={{
-                  backgroundColor: C.surface,
+                  backgroundColor: colors.surface,
                   padding: 16,
                   borderRadius: 12,
                   marginBottom: 10,
@@ -233,12 +234,12 @@ export default function UploadScreen({ onFileSelected, onPastSessionSelected }: 
               >
                 <Text style={{ fontSize: 24, marginRight: 12 }}>🧬</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.textPrimary }}>{session.fileName}</Text>
-                  <Text style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary }}>{session.fileName}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>
                     {new Date(session.date).toLocaleDateString()} • {session.parse.snp_count.toLocaleString()} SNPs
                   </Text>
                 </View>
-                <Text style={{ fontSize: 18, color: C.green }}>→</Text>
+                <Text style={{ fontSize: 18, color: colors.green }}>→</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
