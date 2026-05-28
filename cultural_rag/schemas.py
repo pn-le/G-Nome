@@ -69,7 +69,9 @@ class GenomicProfile(BaseModel):
 
 class DietaryRecommendation(BaseModel):
     condition: str
+    summary: str          # required — LLM must produce this; no default so schema marks it required
     advice: str
+    key_stats: list[str] = Field(default_factory=list)
     culturally_relevant_foods: list[str] = Field(default_factory=list)
     foods_to_limit: list[str] = Field(default_factory=list)
     evidence_source: list[str] = Field(default_factory=list)
@@ -77,8 +79,10 @@ class DietaryRecommendation(BaseModel):
 
 class DrugFoodInteraction(BaseModel):
     drug: str
+    summary: str          # required — same reason
     interaction: str
     cultural_note: str = ""
+    key_stats: list[str] = Field(default_factory=list)
     evidence_source: list[str] = Field(default_factory=list)
 
 
