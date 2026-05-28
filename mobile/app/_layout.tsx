@@ -33,7 +33,7 @@ export default function RootLayout() {
   return (
     <PaperProvider>
       <ReportContext.Provider value={{ report, setReport }}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: Colors.background },

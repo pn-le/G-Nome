@@ -1,19 +1,20 @@
 export const Colors = {
-  background: "#F7F6F3",
-  surface: "#FFFFFF",
-  primary: "#7C3AED",       // purple — gene nodes
-  danger: "#EF4444",        // red/coral — high risk
-  warning: "#F59E0B",       // amber — moderate
-  success: "#10B981",       // teal/green — low risk
-  info: "#3B82F6",          // blue — info
-  pink: "#EC4899",          // pink — CV scan
-  navy: "#1E293B",          // dark navy — center node
-  textPrimary: "#1E293B",
-  textSecondary: "#64748B",
-  textMuted: "#94A3B8",
-  border: "#E2E8F0",
-  cardBg: "#FFFFFF",
-  disclaimerBg: "#FFFBEB",
+  background: "#0B1120", // Deep navy/charcoal background
+  surface: "#111827",    // Slightly lighter dark card background
+  primary: "#2DD4BF",    // Glowing Teal
+  secondary: "#A855F7",  // Amethyst Purple
+  danger: "#F43F5E",     // Rose/Red for high risk
+  warning: "#FBBF24",    // Amber for moderate
+  success: "#10B981",    // Emerald for low risk
+  info: "#38BDF8",       // Sky blue for info
+  pink: "#EC4899",       // Pink for CV
+  navy: "#0F172A",       // Darker navy
+  textPrimary: "#F8FAFC", // Off-white text
+  textSecondary: "#94A3B8", // Slate text
+  textMuted: "#475569",    // Dark slate text
+  border: "#1E293B",       // Subtle border
+  cardBg: "rgba(17, 24, 39, 0.7)", // Semi-transparent card
+  disclaimerBg: "rgba(251, 191, 36, 0.1)", // Amber tint
   disclaimerBorder: "#F59E0B",
 } as const;
 

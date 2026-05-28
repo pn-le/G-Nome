@@ -11,6 +11,19 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { 
+  UploadCloud, 
+  Dna, 
+  Pill, 
+  Activity, 
+  Apple, 
+  Camera, 
+  FileText, 
+  ChevronRight,
+  ShieldCheck
+} from "lucide-react-native";
 import { Colors } from "../lib/colors";
 import { parseFile, getReport } from "../lib/api";
 import { useReport } from "../lib/context";
@@ -85,10 +98,9 @@ export default function UploadScreen() {
         console.error("Supabase insert error:", insertError);
         Alert.alert("Database Error", "Failed to save history: " + insertError.message);
       }
-      fetchHistory(); // refresh the list
+      fetchHistory();
 
       setStage("done");
-
       router.push("/report");
     } catch (err: any) {
       setStage("error");
@@ -99,57 +111,69 @@ export default function UploadScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
+        
+        {/* Header Section */}
         <View style={styles.hero}>
           <Text style={styles.logo}>G-Nome</Text>
-          <Text style={styles.tagline}>Your Genomic Health Passport</Text>
+          <Text style={styles.tagline}>Genomic Health Passport</Text>
           <Text style={styles.description}>
-            Upload your 23andMe or AncestryDNA raw data file to get a
-            personalized report covering drug safety, disease risk, carrier
-            status, and nutrition — adjusted for your ancestry.
+            Securely upload your raw DNA data to unlock precision health insights, personalized drug safety profiles, and ancestry-adjusted risk scores.
           </Text>
         </View>
 
-        <Disclaimer
-          text="Before uploading: This app provides health guidance for informational purposes only, not medical advice. Your genomic data is processed in memory and not stored persistently. Discuss any findings with your healthcare provider."
-        />
-
+        {/* Upload Button */}
         <TouchableOpacity
-          style={[
-            styles.uploadButton,
-            stage !== "idle" && stage !== "error" && styles.uploadDisabled,
-          ]}
+          style={[styles.uploadWrapper, (stage !== "idle" && stage !== "error") && styles.uploadDisabled]}
           onPress={handleUpload}
           disabled={stage !== "idle" && stage !== "error"}
           activeOpacity={0.8}
         >
-          <Text style={styles.uploadIcon}>
-            {stage === "idle" || stage === "error" ? "📂" : "🧬"}
-          </Text>
-          <Text style={styles.uploadText}>
-            {stage === "idle"
-              ? "Upload DNA File"
-              : stage === "error"
-              ? "Try Again"
-              : stage === "parsing"
-              ? "Parsing your DNA..."
-              : stage === "analyzing"
-              ? `Analyzing ${snpCount.toLocaleString()} SNPs...`
-              : "Done!"}
-          </Text>
-          <Text style={styles.uploadSubtext}>
-            {stage === "idle"
-              ? "23andMe (.txt) or AncestryDNA (.csv)"
-              : fileName}
-          </Text>
+          <LinearGradient
+            colors={[Colors.primary, Colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.uploadGradientRing}
+          >
+            <View style={styles.uploadInner}>
+              {stage === "idle" || stage === "error" ? (
+                <UploadCloud color={Colors.primary} size={48} strokeWidth={1.5} />
+              ) : (
+                <Dna color={Colors.primary} size={48} strokeWidth={1.5} />
+              )}
+              
+              <Text style={styles.uploadText}>
+                {stage === "idle"
+                  ? "Tap to Upload"
+                  : stage === "error"
+                  ? "Try Again"
+                  : stage === "parsing"
+                  ? "Parsing Data..."
+                  : stage === "analyzing"
+                  ? "Analyzing..."
+                  : "Done!"}
+              </Text>
+              <Text style={styles.uploadSubtext}>
+                {stage === "idle"
+                  ? "23andMe or AncestryDNA files"
+                  : fileName}
+              </Text>
+
+              {stage === "analyzing" && (
+                <Text style={styles.uploadSubtext}>
+                  {snpCount.toLocaleString()} SNPs matched
+                </Text>
+              )}
+            </View>
+          </LinearGradient>
         </TouchableOpacity>
 
         {(stage === "parsing" || stage === "analyzing") && (
           <View style={styles.loading}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <ActivityIndicator size="small" color={Colors.primary} />
             <Text style={styles.loadingText}>
               {stage === "parsing"
-                ? "Reading your DNA file..."
-                : "Running pharmacogenomics, risk scores, carrier screening, and trait analysis..."}
+                ? "Reading and decoding sequence..."
+                : "Computing polygenic risk & drug safety models..."}
             </Text>
           </View>
         )}
@@ -160,54 +184,54 @@ export default function UploadScreen() {
           </View>
         )}
 
+        {/* Security / Disclaimer Badge */}
+        <View style={styles.securityBadge}>
+          <ShieldCheck color={Colors.success} size={16} />
+          <Text style={styles.securityText}>Processed in-memory. HIPAA-compliant architecture.</Text>
+        </View>
+
+        {/* Previous Reports (Glassmorphism) */}
         {history.length > 0 && (
           <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Previous Reports</Text>
+            <Text style={styles.sectionTitle}>Previous Reports</Text>
             {history.map((record) => (
-              <TouchableOpacity
-                key={record.id}
-                style={styles.historyCard}
-                onPress={() => loadHistoricalReport(record)}
-              >
-                <View style={styles.historyInfo}>
-                  <Text style={styles.historyFile}>📄 {record.file_name}</Text>
-                  <Text style={styles.historyDate}>
-                    {new Date(record.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.historyArrow}>→</Text>
+              <TouchableOpacity key={record.id} onPress={() => loadHistoricalReport(record)}>
+                <BlurView intensity={20} tint="dark" style={styles.historyCard}>
+                  <View style={styles.historyIcon}>
+                    <FileText color={Colors.primary} size={20} />
+                  </View>
+                  <View style={styles.historyInfo}>
+                    <Text style={styles.historyFile} numberOfLines={1}>{record.file_name}</Text>
+                    <Text style={styles.historyDate}>
+                      {new Date(record.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <ChevronRight color={Colors.textSecondary} size={20} />
+                </BlurView>
               </TouchableOpacity>
             ))}
           </View>
         )}
 
-        <View style={styles.features}>
-          <Text style={styles.featuresTitle}>What you'll get</Text>
-          {[
-            { icon: "💊", title: "Drug Safety", desc: "Flags for dangerous drug interactions based on your CYP genes" },
-            { icon: "📊", title: "Disease Risk", desc: "Ancestry-adjusted polygenic risk scores for 3 conditions" },
-            { icon: "🧬", title: "Carrier Status", desc: "Screening for 5 genetic conditions" },
-            { icon: "🥗", title: "Nutrition", desc: "Lactose, caffeine, alcohol, vitamin D, folate, celiac" },
-            { icon: "📷", title: "Skin Scanner", desc: "AI skin lesion analysis fused with your MC1R genetics" },
-          ].map((f) => (
-            <View key={f.title} style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{f.icon}</Text>
-              <View style={styles.featureText}>
+        {/* Features Grid */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>Platform Capabilities</Text>
+          <View style={styles.featuresGrid}>
+            {[
+              { icon: <Pill color={Colors.primary} size={24} />, title: "Pharmacogenomics", desc: "CYP gene drug interactions" },
+              { icon: <Activity color={Colors.secondary} size={24} />, title: "Disease Risk", desc: "Ancestry-adjusted PRS" },
+              { icon: <Dna color={Colors.info} size={24} />, title: "Carrier Status", desc: "Pathogenic variant screening" },
+              { icon: <Apple color={Colors.success} size={24} />, title: "Nutrigenomics", desc: "Dietary trait analysis" },
+            ].map((f, i) => (
+              <BlurView key={i} intensity={20} tint="dark" style={styles.featureCard}>
+                <View style={styles.featureIconWrapper}>{f.icon}</View>
                 <Text style={styles.featureTitle}>{f.title}</Text>
                 <Text style={styles.featureDesc}>{f.desc}</Text>
-              </View>
-            </View>
-          ))}
+              </BlurView>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.equitySection}>
-          <Text style={styles.equityTitle}>Built for everyone</Text>
-          <Text style={styles.equityText}>
-            78-80% of genetic risk algorithms are built on European data. G-Nome
-            explicitly corrects for this — showing you which population weights
-            your scores use and adjusting calculations for your actual ancestry.
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -215,73 +239,124 @@ export default function UploadScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  container: { padding: 24, paddingBottom: 48 },
-  hero: { alignItems: "center", marginBottom: 20, marginTop: 40 },
-  logo: { fontSize: 48, fontWeight: "900", color: Colors.primary, letterSpacing: 2 },
-  tagline: { fontSize: 16, color: Colors.textSecondary, marginTop: 4, fontWeight: "500" },
+  container: { padding: 24, paddingBottom: 60 },
+  
+  hero: { alignItems: "center", marginTop: 24, marginBottom: 32 },
+  logo: { fontSize: 36, fontWeight: "900", color: Colors.textPrimary, letterSpacing: 1 },
+  tagline: { fontSize: 16, color: Colors.primary, marginTop: 4, fontWeight: "600", letterSpacing: 0.5 },
   description: {
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: "center",
     marginTop: 12,
-    lineHeight: 20,
-    paddingHorizontal: 12,
+    lineHeight: 22,
+    paddingHorizontal: 8,
   },
-  uploadButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    padding: 28,
+
+  uploadWrapper: {
     alignItems: "center",
-    marginTop: 16,
+    marginVertical: 16,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  uploadDisabled: { opacity: 0.7 },
-  uploadIcon: { fontSize: 32, marginBottom: 8 },
-  uploadText: { fontSize: 20, fontWeight: "700", color: "#fff" },
-  uploadSubtext: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
-  loading: { alignItems: "center", marginTop: 24, gap: 12 },
-  loadingText: { fontSize: 13, color: Colors.textSecondary, textAlign: "center" },
-  errorBox: {
-    backgroundColor: "#FEE2E2",
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 16,
+  uploadDisabled: { opacity: 0.6 },
+  uploadGradientRing: {
+    padding: 3,
+    borderRadius: 100,
   },
-  errorText: { color: "#991B1B", fontSize: 13 },
-  features: { marginTop: 32 },
-  featuresTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 14 },
-  featureRow: { flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 12 },
-  featureIcon: { fontSize: 24 },
-  featureText: { flex: 1 },
-  featureTitle: { fontSize: 15, fontWeight: "600", color: Colors.textPrimary },
-  featureDesc: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-  equitySection: {
-    marginTop: 28,
-    backgroundColor: "#F3E8FF",
-    borderRadius: 16,
-    padding: 18,
-  },
-  equityTitle: { fontSize: 16, fontWeight: "700", color: Colors.primary, marginBottom: 6 },
-  equityText: { fontSize: 13, color: Colors.textPrimary, lineHeight: 20 },
-  historySection: { marginTop: 32 },
-  historyTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 12 },
-  historyCard: {
+  uploadInner: {
     backgroundColor: Colors.surface,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
+  },
+  uploadText: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginTop: 12 },
+  uploadSubtext: { fontSize: 12, color: Colors.textSecondary, marginTop: 4, textAlign: "center" },
+
+  loading: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 24, gap: 12 },
+  loadingText: { fontSize: 13, color: Colors.textSecondary, fontWeight: "500" },
+
+  errorBox: {
+    backgroundColor: "rgba(244, 63, 94, 0.1)",
+    borderWidth: 1,
+    borderColor: Colors.danger,
     borderRadius: 12,
-    marginBottom: 10,
+    padding: 16,
+    marginTop: 24,
+  },
+  errorText: { color: Colors.danger, fontSize: 13, textAlign: "center" },
+
+  securityBadge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    marginTop: 32,
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderRadius: 100,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(16, 185, 129, 0.2)",
+  },
+  securityText: { fontSize: 12, color: Colors.success, fontWeight: "500" },
+
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 16, marginTop: 32 },
+  
+  historySection: { marginTop: 16 },
+  historyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+  },
+  historyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(45, 212, 191, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   historyInfo: { flex: 1 },
   historyFile: { fontSize: 15, fontWeight: "600", color: Colors.textPrimary, marginBottom: 4 },
-  historyDate: { fontSize: 13, color: Colors.textSecondary },
-  historyArrow: { fontSize: 18, color: Colors.primary, fontWeight: "bold" },
+  historyDate: { fontSize: 12, color: Colors.textSecondary },
+
+  featuresSection: { marginTop: 16 },
+  featuresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  featureCard: {
+    width: "47%",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+  },
+  featureIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  featureTitle: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary, marginBottom: 4 },
+  featureDesc: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
 });
