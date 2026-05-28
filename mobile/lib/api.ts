@@ -1,6 +1,13 @@
 import { Platform } from "react-native";
+import { supabase } from "./supabase";
 
-const API_BASE = __DEV__ ? "http://localhost:8000" : "http://localhost:8000";
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return {};
+  return { Authorization: `Bearer ${session.access_token}` };
+}
 
 async function appendFile(fd: FormData, key: string, uri: string, name: string, mime: string) {
   if (Platform.OS === "web") {
@@ -13,11 +20,13 @@ async function appendFile(fd: FormData, key: string, uri: string, name: string, 
 }
 
 export async function parseFile(fileUri: string, fileName: string): Promise<ParseResult> {
+  const headers = await getAuthHeaders();
   const formData = new FormData();
   await appendFile(formData, "file", fileUri, fileName, "text/plain");
 
   const res = await fetch(`${API_BASE}/api/parse`, {
     method: "POST",
+    headers,
     body: formData,
   });
 
@@ -30,8 +39,10 @@ export async function parseFile(fileUri: string, fileName: string): Promise<Pars
 }
 
 export async function getReport(sessionId: string): Promise<ReportResult> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/report?session_id=${sessionId}`, {
     method: "POST",
+    headers,
   });
 
   if (!res.ok) throw new Error("Report generation failed");
@@ -39,11 +50,13 @@ export async function getReport(sessionId: string): Promise<ReportResult> {
 }
 
 export async function analyzeSelfie(sessionId: string, imageUri: string): Promise<any> {
+  const headers = await getAuthHeaders();
   const formData = new FormData();
   await appendFile(formData, "image", imageUri, "selfie.jpg", "image/jpeg");
 
   const res = await fetch(`${API_BASE}/api/cv/selfie?session_id=${sessionId}`, {
     method: "POST",
+    headers,
     body: formData,
   });
 
@@ -52,15 +65,31 @@ export async function analyzeSelfie(sessionId: string, imageUri: string): Promis
 }
 
 export async function analyzeSkin(sessionId: string, imageUri: string): Promise<any> {
+  const headers = await getAuthHeaders();
   const formData = new FormData();
   await appendFile(formData, "image", imageUri, "skin.jpg", "image/jpeg");
 
   const res = await fetch(`${API_BASE}/api/cv/skin?session_id=${sessionId}`, {
     method: "POST",
+    headers,
     body: formData,
   });
 
   if (!res.ok) throw new Error("Skin analysis failed");
+  return res.json();
+}
+
+export async function getPastSessions(): Promise<SessionSummary[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/sessions`, { headers });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function getSavedReport(sessionId: string): Promise<any> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/report`, { headers });
+  if (!res.ok) throw new Error("Report not found");
   return res.json();
 }
 
@@ -69,6 +98,16 @@ export function getPdfUrl(sessionId: string): string {
 }
 
 // Types
+
+export interface SessionSummary {
+  id: string;
+  created_at: string;
+  dna_source: string;
+  snp_count: number;
+  ancestry_group: string | null;
+  status: string;
+}
+
 export interface ParseResult {
   session_id: string;
   source: string;
@@ -90,7 +129,6 @@ export interface GeneResult {
   status_label: string;
   drug_flags: DrugFlag[];
   disclaimer: string;
-  // CYP2D6 special
   status?: string;
   affected_drugs?: string[];
 }

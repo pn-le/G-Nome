@@ -3,20 +3,24 @@
 import io
 from datetime import datetime
 
+try:
+    from weasyprint import HTML
+    WEASYPRINT_OK = True
+except (ImportError, OSError) as e:
+    WEASYPRINT_OK = False
+    print(f"[pdf] weasyprint unavailable: {e} — PDF export will return plain text")
+
 
 def render_pdf(results: dict, ancestry: dict) -> bytes:
     """Render the full report as a styled PDF. Returns raw PDF bytes."""
     report_text = results.get("report_text", {}).get("full_text", "No report generated.")
 
-    html = _build_html(results, ancestry, report_text)
-
-    try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html).write_pdf()
-        return pdf_bytes
-    except ImportError:
-        # weasyprint not installed — return a simple text-based fallback
+    if not WEASYPRINT_OK:
         return _text_fallback(report_text)
+
+    html = _build_html(results, ancestry, report_text)
+    pdf_bytes = HTML(string=html).write_pdf()
+    return pdf_bytes
 
 
 def _build_html(results: dict, ancestry: dict, report_text: str) -> str:

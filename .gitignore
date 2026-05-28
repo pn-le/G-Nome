@@ -39,6 +39,9 @@ backend/data/cpic/gene_drug_pairs.json
 backend/data/pharmgkb/
 backend/data/clinvar/variant_summary*
 
+# User session data (contains genomic data — never commit)
+backend/sessions/
+
 # Claude-flow artifacts
 .claude-flow/
 .claude/
