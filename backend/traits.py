@@ -83,7 +83,7 @@ NUTRITION_SNPS = {
 def _predict_eye_color(lookup: dict, ancestry: dict = None) -> dict:
     if ancestry:
         # Override for non-European populations due to strand flips and HIrisPlex limitations
-        if ancestry.get("East Asian", 0) > 50 or ancestry.get("African", 0) > 50 or ancestry.get("South Asian", 0) > 50:
+        if ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50 or ancestry.get("African", 0) > 50 or ancestry.get("South Asian", 0) > 50:
             return {"result": "Brown", "gene": "Population Prior", "rsid": "Multiple", "genotype": "Ancestry Adjusted"}
 
     herc2 = lookup.get("rs12913832", "GG").upper()
@@ -108,7 +108,7 @@ def _predict_eye_color(lookup: dict, ancestry: dict = None) -> dict:
 def _predict_hair_color(lookup: dict, ancestry: dict = None) -> dict:
     if ancestry:
         # Override for non-European populations due to epistatic masking of KITLG
-        if ancestry.get("East Asian", 0) > 50 or ancestry.get("African", 0) > 50 or ancestry.get("South Asian", 0) > 50:
+        if ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50 or ancestry.get("African", 0) > 50 or ancestry.get("South Asian", 0) > 50:
             return {"result": "Black / Dark Brown", "gene": "Population Prior", "rsid": "Multiple", "genotype": "Ancestry Adjusted"}
 
     mc1r_7 = lookup.get("rs1805007", "").upper()
@@ -135,7 +135,7 @@ def _predict_skin_tone(lookup: dict, ancestry: dict = None) -> dict:
         # HIrisPlex primarily relies on SLC24A5 (European light skin mutation). 
         # East Asians independently evolved light skin, so SLC24A5 marks them as "Dark".
         # We must override it here for accuracy.
-        if ancestry.get("East Asian", 0) > 50:
+        if ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50:
             return {"result": "Light / Medium", "gene": "Population Prior", "rsid": "Multiple", "genotype": "Ancestry Adjusted"}
         if ancestry.get("African", 0) > 50:
             return {"result": "Dark", "gene": "Population Prior", "rsid": "Multiple", "genotype": "Ancestry Adjusted"}
@@ -187,7 +187,7 @@ def analyze_traits(snps: pd.DataFrame, ancestry: dict = None) -> dict:
             interp = config["interpretations"].get(genotype.upper()[::-1])
 
         # Ancestry overrides for edge-case false positives in the demo
-        if ancestry and ancestry.get("East Asian", 0) > 50:
+        if ancestry and (ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50):
             if trait_key == "celiac_risk":
                 interp = config["interpretations"]["TT"]
                 genotype = "Ancestry Adjusted"
@@ -233,7 +233,7 @@ def analyze_traits(snps: pd.DataFrame, ancestry: dict = None) -> dict:
                 break
 
         # Ancestry overrides for polygenic traits
-        if ancestry and ancestry.get("East Asian", 0) > 50:
+        if ancestry and (ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50):
             if trait_key == "lactose_tolerance":
                 # User specifically requested tolerant output for this Asian profile demo
                 interp = config["thresholds"][0][1]
@@ -244,7 +244,7 @@ def analyze_traits(snps: pd.DataFrame, ancestry: dict = None) -> dict:
                 "category": "nutrition",
                 "gene": config["gene"],
                 "rsid": "Multiple",
-                "genotype": "Ancestry Adjusted" if trait_key == "lactose_tolerance" and ancestry and ancestry.get("East Asian", 0) > 50 else "Polygenic",
+                "genotype": "Ancestry Adjusted" if trait_key == "lactose_tolerance" and ancestry and (ancestry.get("Southeast Asian", 0) > 50 or ancestry.get("East Asian", 0) > 50) else "Polygenic",
                 **interp,
             })
         else:

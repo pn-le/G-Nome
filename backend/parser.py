@@ -80,6 +80,8 @@ def _extract_ancestry(raw_bytes: bytes) -> dict:
             low = line.lower()
             if "european" in low:
                 ancestry["European"] = _parse_pct(line)
+            elif "southeast asian" in low or "south east asian" in low:
+                ancestry["Southeast Asian"] = _parse_pct(line)
             elif "east asian" in low:
                 ancestry["East Asian"] = _parse_pct(line)
             elif "african" in low:
@@ -115,7 +117,7 @@ def _infer_sex(snps: pd.DataFrame) -> str:
 def _infer_ancestry_from_snps(snps: pd.DataFrame) -> dict:
     """Fallback ancestry inference using Ancestry Informative Markers (AIMs)."""
     lookup = dict(zip(snps["rsid"].str.lower(), snps["genotype"]))
-    scores = {"European": 0, "East Asian": 0, "African": 0, "South Asian": 0}
+    scores = {"European": 0, "East Asian": 0, "African": 0, "South Asian": 0, "Southeast Asian": 0}
     
     # 1. European marker: rs1426654 (SLC24A5) A allele
     slc = lookup.get("rs1426654", "").upper()
@@ -123,12 +125,12 @@ def _infer_ancestry_from_snps(snps: pd.DataFrame) -> dict:
         scores["European"] += slc.count("A") * 40
         scores["South Asian"] += slc.count("A") * 20
         scores["African"] += slc.count("G") * 20
-        scores["East Asian"] += slc.count("G") * 20
+        scores["Southeast Asian"] += slc.count("G") * 20
         
-    # 2. East Asian marker: rs3827760 (EDAR) G allele
+    # 2. East/Southeast Asian marker: rs3827760 (EDAR) G allele
     edar = lookup.get("rs3827760", "").upper()
     if edar:
-        scores["East Asian"] += edar.count("G") * 50
+        scores["Southeast Asian"] += edar.count("G") * 50
         
     # 3. African marker: rs2814778 (DARC) C allele
     darc = lookup.get("rs2814778", "").upper()

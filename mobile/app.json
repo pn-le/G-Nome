@@ -1,29 +1,5 @@
 {
-  "expo": {
-    "name": "G-Nome",
-    "slug": "g-nome",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "scheme": "gnome",
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#F7F6F3"
-      }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
-    },
-    "plugins": [
-      "expo-router",
-      "expo-document-picker",
-      "expo-asset",
-      "expo-font"
-    ]
-  }
+  "plugins": [
+    "expo-font"
+  ]
 }
