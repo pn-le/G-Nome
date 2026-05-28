@@ -95,9 +95,9 @@ function CulturePicker({ selected, onSelect, serif, serifBold }: {
 
   return (
     <View style={pick.container}>
-      <Text style={[pick.label, { fontFamily: serifBold }]}>Select Your Cuisine</Text>
+      <Text style={[pick.label, { fontFamily: serifBold }]}>What's in your kitchen?</Text>
       <Text style={[pick.hint, { fontFamily: serif }]}>
-        Choose your home cuisine so we can personalize food recommendations to ingredients you actually cook with.
+        Select the cuisine you eat most often. We will map your genetic risks directly to the foods and ingredients from this culture.
       </Text>
       <View style={pick.grid}>
         {SUPPORTED_CULTURES.map(c => {
@@ -378,14 +378,22 @@ export default function CulturalPlanScreen({ onBack }: Props) {
           <>
             {/* Hero card */}
             <View style={styles.heroCard}>
-              <Text style={styles.heroEmoji}>🌏</Text>
+              <View style={styles.heroIconRow}>
+                <Text style={styles.heroEmoji}>🧬</Text>
+                <Text style={styles.heroPlus}>+</Text>
+                <Text style={styles.heroEmoji}>🍲</Text>
+              </View>
               <Text style={[styles.heroTitle, { fontFamily: serifBold }]}>
-                Food is cultural. Your health plan should be too.
+                DNA tells us your risks.{'\n'}Culture tells us what you eat.
               </Text>
               <Text style={[styles.heroSub, { fontFamily: serif }]}>
-                We match your genetic risk profile to real foods from your home cuisine —
-                backed by USDA data, PubMed research, and WHO guidelines.
+                Your raw DNA file reveals your biological traits, but it doesn't tell us your ethnic origins or what you cook at home. 
               </Text>
+              <View style={styles.heroHighlightBox}>
+                <Text style={[styles.heroHighlightText, { fontFamily: serifBold }]}>
+                  Tell us what you eat, and we'll tell you how your genes respond to it.
+                </Text>
+              </View>
             </View>
 
             <CulturePicker
@@ -525,13 +533,17 @@ const styles = StyleSheet.create({
   // Hero
   heroCard: {
     backgroundColor: C.surface, borderRadius: 16, padding: 20,
-    alignItems: 'center', marginBottom: 20,
+    alignItems: 'center', marginBottom: 24,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
   },
-  heroEmoji: { fontSize: 40, marginBottom: 12 },
-  heroTitle: { fontSize: 18, color: C.primary, textAlign: 'center', marginBottom: 8, lineHeight: 24 },
-  heroSub: { fontSize: 12, color: C.secondary, textAlign: 'center', lineHeight: 18 },
+  heroIconRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  heroEmoji: { fontSize: 32 },
+  heroPlus: { fontSize: 24, color: C.light, fontWeight: 'bold' },
+  heroTitle: { fontSize: 18, color: C.primary, textAlign: 'center', marginBottom: 10, lineHeight: 24 },
+  heroSub: { fontSize: 13, color: C.secondary, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  heroHighlightBox: { backgroundColor: C.lightGreen, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  heroHighlightText: { fontSize: 12, color: C.olive, textAlign: 'center', lineHeight: 18 },
 
   // Error
   errorBox: {
