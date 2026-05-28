@@ -15,10 +15,12 @@ const ACCEPTED_TYPES = ['text/plain', 'text/csv', 'application/zip', 'applicatio
 
 interface Props {
   onFileSelected: () => void;
+  onPastSessionSelected?: () => void;
 }
 
-export default function UploadScreen({ onFileSelected }: Props) {
-  const { setParseResult, setError } = useApp();
+export default function UploadScreen({ onFileSelected, onPastSessionSelected }: Props) {
+  const { setParseResult, setReport, setError } = useApp();
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
   const [pickedFileName, setPickedFileName] = useState<string | null>(null);
   const [parsing, setParsing]               = useState(false);
   const [errorMsg, setErrorMsg]             = useState<string | null>(null);
@@ -31,6 +33,10 @@ export default function UploadScreen({ onFileSelected }: Props) {
 
   const serif     = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
   const serifBold = fontsLoaded ? 'InriaSerif_700Bold'    : undefined;
+
+  React.useEffect(() => {
+    getPastSessions().then(setPastSessions);
+  }, []);
 
   const handleChooseFile = useCallback(async () => {
     Animated.sequence([
@@ -198,6 +204,47 @@ export default function UploadScreen({ onFileSelected }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {pastSessions.length > 0 && (
+        <View style={{ width: SCREEN_W - 40, marginTop: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textSecondary, marginBottom: 10 }}>Recent Records</Text>
+          <ScrollView style={{ maxHeight: 200 }}>
+            {pastSessions.map(session => (
+              <TouchableOpacity
+                key={session.id}
+                style={{
+                  backgroundColor: C.surface,
+                  padding: 16,
+                  borderRadius: 12,
+                  marginBottom: 10,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 5,
+                  elevation: 2,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}
+                onPress={() => {
+                  setParseResult(session.parse);
+                  setReport(session.report);
+                  if (onPastSessionSelected) onPastSessionSelected();
+                }}
+              >
+                <Text style={{ fontSize: 24, marginRight: 12 }}>🧬</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.textPrimary }}>{session.fileName}</Text>
+                  <Text style={{ fontSize: 11, color: C.textSecondary, marginTop: 2 }}>
+                    {new Date(session.date).toLocaleDateString()} • {session.parse.snp_count.toLocaleString()} SNPs
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 18, color: C.green }}>→</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
     </SafeAreaView>
   );
 }

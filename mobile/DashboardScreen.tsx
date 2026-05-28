@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, SafeAreaView, StatusBar, Dimensions,
@@ -38,6 +38,7 @@ interface Props {
   onTabPress?: (tab: TabKey) => void;
   onOpenChat?: () => void;
   onOpenPlan?: () => void;
+
   onOpenCultural?: () => void;
 }
 
@@ -181,6 +182,7 @@ export default function DashboardScreen({
             <Text style={[styles.aiCardSub,   { fontFamily: serif }]}>Personalized meals</Text>
             <Text style={styles.aiCardArrow}>→</Text>
           </TouchableOpacity>
+
         </View>
 
         {/* Cultural Nutrition — teal */}
@@ -195,6 +197,23 @@ export default function DashboardScreen({
             <Text style={[styles.chevron, { fontFamily: serif }]}>›</Text>
           </View>
         </TouchableOpacity>
+
+        {/* ── Saved Plan Reminder ──────────────────────────────────────── */}
+        {savedPlan && (
+          <TouchableOpacity style={styles.priorityCard} onPress={onOpenPlan} activeOpacity={0.8}>
+            <View style={[styles.accentBar, { backgroundColor: C.green }]} />
+            <View style={{ padding: 12, flex: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[styles.geneName, { fontFamily: serifBold }]}>📋 Your 7-Day Plan</Text>
+                {planDate && <Text style={[styles.priorityDesc, { fontFamily: serif }]}>{planDate}</Text>}
+              </View>
+              <Text style={[styles.priorityDesc, { fontFamily: serif }]} numberOfLines={2}>
+                {savedPlan.slice(0, 120)}…
+              </Text>
+              <Text style={[styles.priorityLink, { fontFamily: serif }]}>View full plan →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* ── Explore Reports ─────────────────────────────────────────── */}
         <Text style={[styles.sectionHeader, { fontFamily: serifBold, marginTop: 14 }]}>EXPLORE YOUR REPORTS</Text>

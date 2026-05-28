@@ -216,9 +216,9 @@ function DietaryCard({ rec, index, serif, serifBold }: {
         <Text style={[dc.summary, { fontFamily: serifBold }]}>{displaySummary}</Text>
 
         {/* Key stat chips */}
-        {rec.key_stats?.length > 0 && (
+        {(rec.key_stats || []).length > 0 && (
           <View style={dc.statsRow}>
-            {rec.key_stats.map((stat, i) => (
+            {(rec.key_stats || []).map((stat, i) => (
               <View key={i} style={dc.statChip}>
                 <Text style={[dc.statText, { fontFamily: serif }]}>{stat}</Text>
               </View>
@@ -347,9 +347,9 @@ function InteractionCard({ interaction, serif, serifBold }: {
       <Text style={[ic.summaryText, { fontFamily: serifBold }]}>{displaySummary}</Text>
 
       {/* Key stat chips */}
-      {interaction.key_stats?.length > 0 && (
+      {(interaction.key_stats || []).length > 0 && (
         <View style={ic.statsRow}>
-          {interaction.key_stats.map((stat, i) => (
+          {(interaction.key_stats || []).map((stat, i) => (
             <View key={i} style={ic.statChip}>
               <Text style={[ic.statText, { fontFamily: serif }]}>{stat}</Text>
             </View>

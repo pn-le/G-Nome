@@ -6,6 +6,7 @@ import {
 import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { InriaSerif_400Regular } from '@expo-google-fonts/inria-serif';
 import { getReport } from './lib/api';
+import { savePastSession } from './lib/storage';
 import { useApp } from './lib/AppContext';
 import { colors } from './constants/theme';
 

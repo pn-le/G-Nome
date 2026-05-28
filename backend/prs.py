@@ -195,7 +195,7 @@ def _score_to_percentile(z_score: float) -> float:
     return round(norm.cdf(z_score) * 100, 1)
 
 
-from .inference.risk_engine import predict_risk as predict_user_risk
+from inference.risk_engine import predict_risk as predict_user_risk
 
 def compute_risk_scores(snps: pd.DataFrame, ancestry: dict, sex: str = "Unknown") -> dict:
     dominant_ancestry, dominant_pct, _ = _get_ancestry_weights(ancestry)

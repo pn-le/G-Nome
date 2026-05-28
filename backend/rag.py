@@ -2,7 +2,7 @@
 
 import os
 from openai import AsyncOpenAI
-from .supabase_client import get_supabase
+from supabase_client import get_supabase
 
 _client = None
 

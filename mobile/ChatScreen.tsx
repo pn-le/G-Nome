@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, Image } from 'react-native';
 import { useFonts } from 'expo-font';
 import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/inria-serif';
 import { useApp } from './lib/AppContext';
-import { sendChatMessage } from './lib/api';
+import { sendChatMessage, getChatHistory } from './lib/api';
 
 const C = {
   bg:        '#F7F6F2',
@@ -27,12 +27,36 @@ export default function ChatScreen({ onBack }: Props) {
   const serif = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
 
   const { sessionId } = useApp();
-  const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([{
-    role: 'assistant',
-    content: "Hi! I'm your genomic AI assistant. Ask me anything about your health report!"
-  }]);
+  const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    (async () => {
+      setLoadingHistory(true);
+      try {
+        const history = await getChatHistory(sessionId);
+        if (history.length > 0) {
+          setMessages(history.map(m => ({ role: m.role, content: m.content })));
+        } else {
+          setMessages([{
+            role: 'assistant',
+            content: "Hi! I'm your genomic AI assistant. Ask me anything about your health report!"
+          }]);
+        }
+      } catch {
+        setMessages([{
+          role: 'assistant',
+          content: "Hi! I'm your genomic AI assistant. Ask me anything about your health report!"
+        }]);
+      } finally {
+        setLoadingHistory(false);
+      }
+    })();
+  }, [sessionId]);
 
   const sendMessage = async () => {
     if (!input.trim() || !sessionId) return;
@@ -49,6 +73,7 @@ export default function ChatScreen({ onBack }: Props) {
       setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, I couldn't process that request right now."}]);
     } finally {
       setLoading(false);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     }
   };
 
@@ -67,12 +92,16 @@ export default function ChatScreen({ onBack }: Props) {
           <View style={{width: 50}} />
         </View>
 
-        <ScrollView style={styles.chatArea} contentContainerStyle={{ padding: 16 }}>
-          {messages.map((m, i) => (
-            <View key={i} style={[styles.bubble, m.role === 'user' ? styles.userBubble : styles.botBubble]}>
-              <Text style={[m.role === 'user' ? styles.userText : styles.botText, { fontFamily: serif }]}>{m.content}</Text>
-            </View>
-          ))}
+        <ScrollView ref={scrollRef} style={styles.chatArea} contentContainerStyle={{ padding: 16 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+          {loadingHistory ? (
+            <ActivityIndicator size="large" color={C.green} style={{ marginTop: 40 }} />
+          ) : (
+            messages.map((m, i) => (
+              <View key={i} style={[styles.bubble, m.role === 'user' ? styles.userBubble : styles.botBubble]}>
+                <Text style={[m.role === 'user' ? styles.userText : styles.botText, { fontFamily: serif }]}>{m.content}</Text>
+              </View>
+            ))
+          )}
           {loading && <ActivityIndicator size="small" color={C.green} style={{marginTop: 10}}/>}
         </ScrollView>
         

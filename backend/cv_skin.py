@@ -88,34 +88,46 @@ def _get_mc1r_multiplier(snps: pd.DataFrame) -> dict:
 
 
 def _run_inference(img_bytes: bytes) -> dict:
-    """Run EfficientNet-B4 inference on skin lesion image."""
+    """Run ViT inference on skin lesion image using a fine-tuned HAM10000 model."""
     try:
         from PIL import Image
         import torch
-        from torchvision import transforms
-        from transformers import AutoModelForImageClassification
+        from transformers import AutoImageProcessor, AutoModelForImageClassification
 
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
-        transform = transforms.Compose([
-            transforms.Resize((380, 380)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        tensor = transform(img).unsqueeze(0)
-
-        model = AutoModelForImageClassification.from_pretrained(
-            "google/efficientnet-b4",
-            num_labels=7,
-            ignore_mismatched_sizes=True,
-        )
+        model_name = "Anwarkh1/Skin_Cancer-Image_Classification"
+        processor = AutoImageProcessor.from_pretrained(model_name)
+        model = AutoModelForImageClassification.from_pretrained(model_name)
         model.eval()
 
+        inputs = processor(images=img, return_tensors="pt")
+
         with torch.no_grad():
-            outputs = model(tensor)
+            outputs = model(**inputs)
             probs = torch.softmax(outputs.logits, dim=1).squeeze().numpy()
 
-        class_probs = {cls: round(float(prob), 4) for cls, prob in zip(CLASSES, probs)}
+        hf_mapping = {
+            'benign_keratosis-like_lesions': 'BKL',
+            'basal_cell_carcinoma': 'BCC',
+            'actinic_keratoses': 'AKIEC',
+            'vascular_lesions': 'VASC',
+            'melanocytic_Nevi': 'NV',
+            'melanoma': 'MEL',
+            'dermatofibroma': 'DF'
+        }
+
+        class_probs = {}
+        for idx, prob in enumerate(probs):
+            label_name = model.config.id2label[idx]
+            std_class = hf_mapping.get(label_name)
+            if std_class:
+                class_probs[std_class] = round(float(prob), 4)
+
+        for cls in CLASSES:
+            if cls not in class_probs:
+                class_probs[cls] = 0.0
+
         return {"success": True, "probabilities": class_probs}
 
     except Exception as e:
@@ -131,10 +143,23 @@ def _mock_probabilities() -> dict:
     return {"MEL": 0.08, "NV": 0.72, "BCC": 0.05, "AKIEC": 0.03, "BKL": 0.07, "DF": 0.03, "VASC": 0.02}
 
 
-def _compute_fused_risk(p_melanoma: float, genetic_multiplier: float) -> dict:
-    """Fuse CV melanoma probability with MC1R genetic risk."""
-    fused = p_melanoma * genetic_multiplier
-    fused_pct = min(round(fused * 100, 1), 100)
+def _compute_fused_risk(probs: dict, genetic_multiplier: float) -> dict:
+    """Fuse CV probabilities with MC1R genetic risk.
+    
+    MC1R primarily multiplies Melanoma risk, but we also must factor in
+    base probabilities for other malignant classes (BCC, AKIEC) to
+    determine overall urgency.
+    """
+    p_melanoma = probs.get("MEL", 0.0)
+    p_bcc = probs.get("BCC", 0.0)
+    p_akiec = probs.get("AKIEC", 0.0)
+
+    fused_melanoma = p_melanoma * genetic_multiplier
+    
+    # Overall risk is the maximum of the genetically-adjusted melanoma risk,
+    # or the raw probability of other skin cancers.
+    max_cancer_risk = max(fused_melanoma, p_bcc, p_akiec)
+    fused_pct = min(round(max_cancer_risk * 100, 1), 100.0)
 
     if fused_pct >= 75:
         urgency, urgency_label, color = "urgent", "Urgent — seek review within 1 week", "#e74c3c"
@@ -155,7 +180,9 @@ def analyze_skin_lesion(img_bytes: bytes, snps: pd.DataFrame) -> dict:
 
     mc1r = _get_mc1r_multiplier(snps)
     p_melanoma = probs.get("MEL", 0)
-    fused = _compute_fused_risk(p_melanoma, mc1r["multiplier"])
+    
+    # Compute overall urgency using all probabilities
+    fused = _compute_fused_risk(probs, mc1r["multiplier"])
 
     classifications = []
     for cls in sorted(probs, key=probs.get, reverse=True):
