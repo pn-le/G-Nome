@@ -1,205 +1,98 @@
-import { Platform } from "react-native";
-import { supabase } from "./supabase";
+import { Platform } from 'react-native';
+import { ParseResult, ReportResult } from './types';
+import { API_BASE_URL } from './config';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return {};
-  return { Authorization: `Bearer ${session.access_token}` };
-}
-
-async function appendFile(fd: FormData, key: string, uri: string, name: string, mime: string) {
-  if (Platform.OS === "web") {
-    const r = await fetch(uri);
-    const blob = await r.blob();
-    fd.append(key, new File([blob], name, { type: mime }));
-  } else {
-    fd.append(key, { uri, name, type: mime } as any);
+async function readErrorBody(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    if (typeof data?.detail === 'string') return data.detail;
+    return JSON.stringify(data);
+  } catch {
+    try {
+      return await res.text();
+    } catch {
+      return res.statusText;
+    }
   }
 }
 
-export async function parseFile(fileUri: string, fileName: string): Promise<ParseResult> {
-  const headers = await getAuthHeaders();
-  const formData = new FormData();
-  await appendFile(formData, "file", fileUri, fileName, "text/plain");
+function guessMimeType(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'txt': return 'text/plain';
+    case 'csv': return 'text/csv';
+    case 'zip': return 'application/zip';
+    default:    return 'application/octet-stream';
+  }
+}
 
-  const res = await fetch(`${API_BASE}/api/parse`, {
-    method: "POST",
-    headers,
-    body: formData,
+export async function parseFile(fileUri: string, fileName: string, webFile?: File): Promise<ParseResult> {
+  console.log(`[api] parseFile name=${fileName} platform=${Platform.OS} base=${API_BASE_URL}`);
+
+  const form = new FormData();
+  if (Platform.OS === 'web') {
+    if (!webFile) throw new Error('File object missing — please try picking the file again.');
+    // Browser FormData requires a native File/Blob
+    form.append('file', webFile, fileName);
+  } else {
+    // React Native native: {uri, name, type} object
+    form.append('file', {
+      uri: fileUri,
+      name: fileName,
+      type: guessMimeType(fileName),
+    } as any);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/parse`, {
+    method: 'POST',
+    body: form,
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Parse failed: ${err}`);
+    throw new Error(`Parse failed (${res.status}): ${await readErrorBody(res)}`);
   }
-
-  return res.json();
+  return (await res.json()) as ParseResult;
 }
 
 export async function getReport(sessionId: string): Promise<ReportResult> {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/api/report?session_id=${sessionId}`, {
-    method: "POST",
-    headers,
-  });
+  console.log(`[api] getReport session_id=${sessionId} base=${API_BASE_URL}`);
 
-  if (!res.ok) throw new Error("Report generation failed");
-  return res.json();
-}
+  const url = `${API_BASE_URL}/api/report?session_id=${encodeURIComponent(sessionId)}`;
+  const res = await fetch(url, { method: 'POST' });
 
-export async function analyzeSelfie(sessionId: string, imageUri: string): Promise<any> {
-  const headers = await getAuthHeaders();
-  const formData = new FormData();
-  await appendFile(formData, "image", imageUri, "selfie.jpg", "image/jpeg");
-
-  const res = await fetch(`${API_BASE}/api/cv/selfie?session_id=${sessionId}`, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error("Selfie analysis failed");
-  return res.json();
-}
-
-export async function analyzeSkin(sessionId: string, imageUri: string): Promise<any> {
-  const headers = await getAuthHeaders();
-  const formData = new FormData();
-  await appendFile(formData, "image", imageUri, "skin.jpg", "image/jpeg");
-
-  const res = await fetch(`${API_BASE}/api/cv/skin?session_id=${sessionId}`, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error("Skin analysis failed");
-  return res.json();
-}
-
-export async function getPastSessions(): Promise<SessionSummary[]> {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/api/sessions`, { headers });
-  if (!res.ok) return [];
-  return res.json();
-}
-
-export async function getSavedReport(sessionId: string): Promise<any> {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/report`, { headers });
-  if (!res.ok) throw new Error("Report not found");
-  return res.json();
+  if (!res.ok) {
+    throw new Error(`Report failed (${res.status}): ${await readErrorBody(res)}`);
+  }
+  return (await res.json()) as ReportResult;
 }
 
 export function getPdfUrl(sessionId: string): string {
-  return `${API_BASE}/api/pdf/${sessionId}`;
+  if (!sessionId) return '';
+  return `${API_BASE_URL}/api/pdf/${encodeURIComponent(sessionId)}`;
 }
 
-// Types
-
-export interface SessionSummary {
-  id: string;
-  created_at: string;
-  dna_source: string;
-  snp_count: number;
-  ancestry_group: string | null;
-  status: string;
+export async function checkHealth(): Promise<{ status: string; sessions: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/health`);
+  if (!res.ok) throw new Error(`Health check failed (${res.status})`);
+  return res.json();
 }
 
-export interface ParseResult {
-  session_id: string;
-  source: string;
-  snp_count: number;
-  chromosomes: number;
-  ancestry: Record<string, number>;
+export async function sendChatMessage(sessionId: string, message: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/chat/${sessionId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message })
+  });
+  if (!res.ok) throw new Error('Chat failed');
+  const data = await res.json();
+  return data.response;
 }
 
-export interface DrugFlag {
-  drug: string;
-  severity: "HIGH" | "MODERATE" | "LOW";
-  action: string;
-  reason: string;
-}
-
-export interface GeneResult {
-  gene: string;
-  metabolizer_status: string;
-  status_label: string;
-  drug_flags: DrugFlag[];
-  disclaimer: string;
-  status?: string;
-  affected_drugs?: string[];
-}
-
-export interface RiskCondition {
-  condition: string;
-  label: string;
-  description: string;
-  status: string;
-  raw_score?: number;
-  percentile?: number;
-  risk_tier?: string;
-  risk_label?: string;
-  snps_matched?: number;
-  snps_total?: number;
-  coverage_pct?: number;
-  ancestry_adjustment?: {
-    primary_ancestry: string;
-    ancestry_percentage: number;
-    population_used: string;
-    confidence: string;
-    note: string;
-  };
-  message?: string;
-  disclaimer?: string;
-}
-
-export interface CarrierResult {
-  gene: string;
-  condition: string;
-  rsid: string;
-  genotype: string;
-  status: string;
-  status_label: string;
-  detail: string;
-  notes: string;
-  disclaimer: string;
-}
-
-export interface TraitResult {
-  name: string;
-  category: string;
-  gene: string;
-  rsid: string;
-  genotype: string;
-  status: string;
-  label: string;
-  detail: string;
-}
-
-export interface ReportResult {
-  pharmacogenomics: {
-    genes: GeneResult[];
-    summary: { high_risk_drugs: number; moderate_risk_drugs: number; genes_tested: number };
-  };
-  disease_risk: {
-    conditions: RiskCondition[];
-    equity_note: string;
-  };
-  carrier_status: {
-    results: CarrierResult[];
-    carriers_found: number;
-    conditions_tested: number;
-    disclaimer: string;
-  };
-  nutrition_traits: {
-    traits: TraitResult[];
-    total_tested: number;
-  };
-  report_text: {
-    full_text: string;
-    llm_generated: boolean;
-  };
+export async function generateMealPlan(sessionId: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/meal-plan/${sessionId}`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error('Plan failed');
+  const data = await res.json();
+  return data.plan;
 }

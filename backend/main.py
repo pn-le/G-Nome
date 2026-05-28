@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import pandas as pd
-from fastapi import FastAPI, File, Header, UploadFile, HTTPException
+from fastapi import FastAPI, File, Header, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -263,6 +263,11 @@ async def report(session_id: str, authorization: str | None = Header(None)):
     if user_id:
         _save_report_supabase(session_id, user_id, modules, llm_report)
 
+    # RAG: Background embed the report for chat
+    from rag import embed_and_store_report
+    import asyncio
+    asyncio.create_task(embed_and_store_report(session_id, user_id or "anonymous", full_report, llm_report["full_text"]))
+
     return full_report
 
 
@@ -354,6 +359,103 @@ async def get_pdf(session_id: str):
         headers={"Content-Disposition": f"attachment; filename=gnome_passport_{session_id}.pdf"},
     )
 
+
+@app.post("/api/chat/{session_id}")
+async def chat(session_id: str, request: Request, authorization: str | None = Header(None)):
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+        
+    data = await request.json()
+    message = data.get("message")
+    if not message:
+        raise HTTPException(400, "Message required")
+        
+    from rag import rag_search, _get_client
+    
+    context = await rag_search(session_id, message)
+    system_prompt = f"""You are G-Nome, an AI health assistant. You are chatting with a user about their genetic health report.
+Use the following context from their report to answer their questions. If the context does not contain the answer, say so.
+Context from their report:
+{context}
+"""
+    
+    client = _get_client()
+    if not client:
+        raise HTTPException(503, "Nebius API not configured")
+        
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("NEBIUS_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ],
+            temperature=0.3,
+            max_tokens=500
+        )
+        return {"response": response.choices[0].message.content}
+    except Exception as e:
+        raise HTTPException(500, f"LLM error: {e}")
+
+@app.post("/api/meal-plan/{session_id}")
+async def generate_meal_plan(session_id: str, authorization: str | None = Header(None)):
+    session = sessions.get(session_id)
+    traits = {}
+    if "results" in session:
+        traits = session["results"].get("nutrition_traits", {})
+    else:
+        # Fallback to Supabase if server restarted and memory is wiped
+        sb = get_supabase()
+        if sb:
+            try:
+                res = sb.table("processed_genomic_results").select("report_data").eq("session_id", session_id).execute()
+                if res.data and len(res.data) > 0:
+                    traits = res.data[0].get("report_data", {}).get("report", {}).get("nutrition_traits", {})
+                    # Also restore to memory
+                    session["results"] = res.data[0].get("report_data", {}).get("report", {})
+            except Exception as e:
+                print(f"Fallback fetch failed: {e}")
+                
+    if not traits:
+        raise HTTPException(404, "Session/results not found. Run report first.")
+
+    from rag import _get_client
+    client = _get_client()
+    if not client:
+        raise HTTPException(503, "Nebius API not configured")
+    
+    system_prompt = """You are a genomic nutritionist. Given a user's genetic traits, generate a strict 7-day personalized meal and lifestyle plan.
+Format the output as a beautiful markdown document with a daily schedule. Be extremely specific based on their traits (e.g. if lactose intolerant, mandate no dairy)."""
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.environ.get("NEBIUS_MODEL", "meta-llama/Llama-3.3-70B-Instruct"),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"My traits: {json.dumps(traits)}"}
+            ],
+            temperature=0.4,
+            max_tokens=1500
+        )
+        plan = response.choices[0].message.content
+        
+        # Save to supabase
+        sb = get_supabase()
+        if sb:
+            user_id = await _get_user_id(authorization) or session.get("user_id")
+            if user_id:
+                try:
+                    sb.table("lifestyle_plans").insert({
+                        "session_id": session_id,
+                        "plan_data": {"markdown": plan}
+                    }).execute()
+                except Exception as e:
+                    print(f"Failed to save plan to Supabase (did you run the SQL script?): {e}")
+                
+        return {"plan": plan}
+    except Exception as e:
+        raise HTTPException(500, f"LLM error: {e}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -260,6 +260,7 @@ def compute_risk_scores(snps: pd.DataFrame, ancestry: dict, sex: str = "Unknown"
         "African": 1,
         "Native American": 2,
         "East Asian": 3,
+        "Southeast Asian": 3,
         "South Asian": 4,
         "default": 0
     }
