@@ -517,16 +517,35 @@ CULTURE_FOODS: dict[str, list[str]] = {
 }
 
 CULTURE_HIERARCHY = {
+    # Asian
     "Vietnamese": "Southeast Asian",
     "Filipino": "Southeast Asian",
     "Thai": "Southeast Asian",
-    "German": "European",
-    "Italian": "European",
     "Korean": "East Asian",
     "Japanese": "East Asian",
+    "Chinese": "East Asian",
+    "Indian": "South Asian",
+    "Pakistani": "South Asian",
+    
+    # European
+    "German": "European",
+    "Italian": "European",
+    "French": "European",
+    "Greek": "European",
+    
+    # Latin American
     "Brazilian": "South American",
     "Mexican": "Latin American",
-    "Indian": "South Asian",
+    "Caribbean": "Latin American",
+    
+    # African
+    "Ethiopian": "African",
+    "Nigerian": "African",
+    
+    # Middle Eastern
+    "Turkish": "Middle Eastern",
+    "Persian": "Middle Eastern",
+
     # Add identity fallbacks for the macro regions
     "East Asian": "East Asian",
     "South Asian": "South Asian",

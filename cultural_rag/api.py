@@ -72,7 +72,7 @@ async def cultural_recommendations(req: CulturalRequest) -> CulturalRecommendati
     if req.metabolizer_status:
         profile.metabolizer_status = req.metabolizer_status
 
-    resolved = resolve_culture(profile)
+    resolved = await resolve_culture(profile)
     profile.culture = resolved
 
     sb = _get_supabase()
