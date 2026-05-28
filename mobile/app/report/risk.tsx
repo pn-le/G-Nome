@@ -44,14 +44,14 @@ export default function RiskTab() {
           return (
             <SectionCard
               key={cond.condition}
-              title={cond.label}
+              title={cond.label || cond.condition}
               subtitle={cond.description}
-              disclaimer="This is not a diagnosis. Risk scores indicate likelihood, not certainty."
+              disclaimer={cond.disclaimer || "This is not a diagnosis. Risk scores indicate likelihood, not certainty."}
             >
               <View style={styles.meterRow}>
                 <RiskMeter
                   value={cond.percentile!}
-                  label="percentile"
+                  label={cond.is_ml_model ? "risk %" : "percentile"}
                   color={color}
                   size={110}
                 />
@@ -64,6 +64,20 @@ export default function RiskTab() {
                   <Text style={styles.stat}>Coverage: {cond.coverage_pct}%</Text>
                 </View>
               </View>
+
+              {/* ML Driving Factors */}
+              {cond.is_ml_model && cond.driving_factors && (
+                <View style={styles.mlFactorsContainer}>
+                  <Text style={styles.mlFactorsTitle}>Top ML Risk Drivers:</Text>
+                  <View style={styles.mlFactorsList}>
+                    {cond.driving_factors.map((factor: string, idx: number) => (
+                      <View key={idx} style={styles.mlFactorBadge}>
+                        <Text style={styles.mlFactorText}>{factor}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
 
               <EquityBadge
                 ancestryCode={0}
@@ -85,16 +99,49 @@ const styles = StyleSheet.create({
   heading: { fontSize: 24, fontWeight: "800", color: Colors.textPrimary },
   subheading: { fontSize: 14, color: Colors.textSecondary, marginTop: 2, marginBottom: 16 },
   equityBanner: {
-    backgroundColor: "#F3E8FF",
+    backgroundColor: "rgba(168, 85, 247, 0.15)", // Amethyst Purple tint
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
   },
-  equityText: { fontSize: 13, color: Colors.primary, fontWeight: "500", lineHeight: 19 },
+  equityText: { fontSize: 13, color: Colors.secondary, fontWeight: "500", lineHeight: 19 },
   meterRow: { flexDirection: "row", alignItems: "center", gap: 18, marginBottom: 14 },
   meterInfo: { flex: 1 },
   riskLabel: { fontSize: 20, fontWeight: "800", marginBottom: 4 },
   stat: { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
   adjNote: { fontSize: 12, color: Colors.textSecondary, marginTop: 8, lineHeight: 17 },
   noData: { fontSize: 13, color: Colors.textMuted, fontStyle: "italic" },
+  
+  mlFactorsContainer: {
+    backgroundColor: "rgba(45, 212, 191, 0.1)", // Teal tint
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(45, 212, 191, 0.2)",
+  },
+  mlFactorsTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.primary,
+    marginBottom: 8,
+  },
+  mlFactorsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  mlFactorBadge: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  mlFactorText: {
+    fontSize: 11,
+    color: Colors.textPrimary,
+    fontWeight: "600",
+  },
 });
