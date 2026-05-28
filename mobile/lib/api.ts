@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { ParseResult, ReportResult, CulturalRecommendations } from './types';
+import { ParseResult, ReportResult, CulturalRecommendations, ScanResult } from './types';
 import { API_BASE_URL } from './config';
 
 async function readErrorBody(res: Response): Promise<string> {
@@ -97,7 +97,29 @@ export async function generateMealPlan(sessionId: string): Promise<string> {
   return data.plan;
 }
 
+export async function getScans(sessionId: string): Promise<ScanResult[]> {
+  const res = await fetch(`${API_BASE_URL}/api/scans/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) throw new Error('Failed to fetch scans');
+  return res.json();
+}
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> {
+  const res = await fetch(`${API_BASE_URL}/api/chat-history/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function getLifestylePlan(sessionId: string): Promise<{ plan: string | null; created_at?: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/lifestyle-plan/${encodeURIComponent(sessionId)}`);
+  if (!res.ok) return { plan: null };
+  return res.json();
+}
 
 export async function analyzeSelfie(sessionId: string, imageUri: string, webFile?: File): Promise<any> {
   const formData = new FormData();

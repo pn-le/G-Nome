@@ -149,3 +149,20 @@ export const SUPPORTED_CULTURES = [
 ] as const;
 
 export type SupportedCulture = (typeof SUPPORTED_CULTURES)[number] | string;
+
+export interface ScanResult {
+  id: number;
+  session_id: string;
+  user_id: string;
+  scan_type: string;
+  created_at: string;
+  image_path?: string;
+  image_url?: string;
+  disclaimer?: string;
+  urgency?: string;
+  fused_score?: number;
+  p_melanoma_raw?: number;
+  mc1r_multiplier?: number;
+  detected?: any;
+  concordance?: string;
+}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, SafeAreaView, StatusBar, Dimensions,
@@ -8,6 +8,7 @@ import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/in
 import BottomNav, { TabKey } from './BottomNav';
 import { useApp } from './lib/AppContext';
 import { RiskCondition } from './lib/types';
+import { getLifestylePlan } from './lib/api';
 
 const C = {
   bg:            '#F7F6F2',
@@ -65,10 +66,27 @@ interface Props {
 
 export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, onOpenPlan, onOpenCultural }: Props) {
   const [fontsLoaded] = useFonts({ InriaSerif_400Regular, InriaSerif_700Bold });
-  const { report, parseResult, healthScore, dominantAncestry } = useApp();
+  const { report, parseResult, healthScore, dominantAncestry, sessionId } = useApp();
 
   const serif     = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
   const serifBold = fontsLoaded ? 'InriaSerif_700Bold'    : undefined;
+
+  // Saved plan preview
+  const [savedPlan, setSavedPlan] = useState<string | null>(null);
+  const [planDate, setPlanDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    (async () => {
+      try {
+        const res = await getLifestylePlan(sessionId);
+        if (res.plan) {
+          setSavedPlan(res.plan);
+          setPlanDate(res.created_at ? new Date(res.created_at).toLocaleDateString() : null);
+        }
+      } catch {}
+    })();
+  }, [sessionId]);
 
   // — Derived data —
   const conditions = report?.disease_risk.conditions ?? [];
@@ -203,6 +221,23 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
             <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Cuisine-aware food recs from your DNA</Text>
           </View>
         </TouchableOpacity>
+
+        {/* ── Saved Plan Reminder ──────────────────────────────────────── */}
+        {savedPlan && (
+          <TouchableOpacity style={styles.priorityCard} onPress={onOpenPlan} activeOpacity={0.8}>
+            <View style={[styles.accentBar, { backgroundColor: C.green }]} />
+            <View style={{ padding: 12, flex: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[styles.geneName, { fontFamily: serifBold }]}>📋 Your 7-Day Plan</Text>
+                {planDate && <Text style={[styles.priorityDesc, { fontFamily: serif }]}>{planDate}</Text>}
+              </View>
+              <Text style={[styles.priorityDesc, { fontFamily: serif }]} numberOfLines={2}>
+                {savedPlan.slice(0, 120)}…
+              </Text>
+              <Text style={[styles.priorityLink, { fontFamily: serif }]}>View full plan →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* ── Explore Reports ─────────────────────────────────────────── */}
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -21,7 +21,8 @@ import { SectionCard } from "./components/SectionCard";
 import { RiskMeter } from "./components/RiskMeter";
 import { EquityBadge } from "./components/EquityBadge";
 import { Disclaimer } from "./components/Disclaimer";
-import { analyzeSelfie, analyzeSkin } from "./lib/api";
+import { analyzeSelfie, analyzeSkin, getScans } from "./lib/api";
+import { ScanResult } from "./lib/types";
 import BottomNav, { TabKey } from './BottomNav';
 
 interface Props {
@@ -53,6 +54,26 @@ export default function ScanScreen({ onTabPress, onNewUpload }: Props) {
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [skinImage, setSkinImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  const [history, setHistory] = useState<ScanResult[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchHistory = async () => {
+    if (!sessionId) return;
+    setLoadingHistory(true);
+    try {
+      const scans = await getScans(sessionId);
+      setHistory(scans);
+    } catch (err) {
+      console.warn("Failed to fetch scan history", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, [sessionId]);
 
   async function pickAndAnalyze(type: "selfie" | "skin") {
     if (!sessionId) {
@@ -86,6 +107,7 @@ export default function ScanScreen({ onTabPress, onNewUpload }: Props) {
       Alert.alert("Error", err.message || "Failed to analyze.");
     } finally {
       setLoading(null);
+      fetchHistory(); // Refresh history after scan
     }
   }
 
@@ -213,6 +235,54 @@ export default function ScanScreen({ onTabPress, onNewUpload }: Props) {
           )}
         </SectionCard>
 
+        {/* Skin Scan History */}
+        {history.filter(s => s.scan_type === 'skin').length > 0 && (
+          <SectionCard title="Previous Skin Scans" subtitle="History of your mole / lesion scans">
+            {history.filter(s => s.scan_type === 'skin').map(scan => (
+              <View key={scan.id} style={styles.historyItem}>
+                {scan.image_url ? (
+                  <Image source={{ uri: scan.image_url }} style={styles.historyImage} />
+                ) : (
+                  <View style={styles.historyImagePlaceholder} />
+                )}
+                <View style={styles.historyContent}>
+                  <Text style={[styles.historyType, { fontFamily: serifBold }]}>Skin Lesion</Text>
+                  <Text style={[styles.historyDate, { fontFamily: serif }]}>
+                    {new Date(scan.created_at).toLocaleDateString()}
+                  </Text>
+                  <Text style={[styles.historyResult, { fontFamily: serif, color: scan.urgency === 'High' ? '#DB2777' : C.olive }]}>
+                    Urgency: {scan.urgency} · Fused: {scan.fused_score?.toFixed(0)}%
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </SectionCard>
+        )}
+
+        {/* Selfie Phenotype History */}
+        {history.filter(s => s.scan_type === 'selfie').length > 0 && (
+          <SectionCard title="Previous Selfie Scans" subtitle="History of your phenotype checks">
+            {history.filter(s => s.scan_type === 'selfie').map(scan => (
+              <View key={scan.id} style={styles.historyItem}>
+                {scan.image_url ? (
+                  <Image source={{ uri: scan.image_url }} style={styles.historyImage} />
+                ) : (
+                  <View style={styles.historyImagePlaceholder} />
+                )}
+                <View style={styles.historyContent}>
+                  <Text style={[styles.historyType, { fontFamily: serifBold }]}>Selfie Phenotype</Text>
+                  <Text style={[styles.historyDate, { fontFamily: serif }]}>
+                    {new Date(scan.created_at).toLocaleDateString()}
+                  </Text>
+                  <Text style={[styles.historyResult, { fontFamily: serif }]}>
+                    Concordance: {scan.concordance ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </SectionCard>
+        )}
+
         {/* Upload new file section */}
         <SectionCard title="New Report" subtitle="Scan a different DNA kit">
           <TouchableOpacity 
@@ -294,4 +364,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnSecondaryText: { fontSize: 14, color: C.olive },
+  historyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.surface,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  historyImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  historyImagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: C.border,
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyType: {
+    fontSize: 15,
+    color: C.primary,
+    marginBottom: 2,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: C.secondary,
+    marginBottom: 4,
+  },
+  historyResult: {
+    fontSize: 13,
+    color: C.olive,
+  },
 });
