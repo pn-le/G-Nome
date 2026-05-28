@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,8 +15,17 @@ import { Colors } from "../lib/colors";
 import { parseFile, getReport } from "../lib/api";
 import { useReport } from "../lib/context";
 import { Disclaimer } from "../components/Disclaimer";
+import { supabase } from "../lib/supabase";
 
 type Stage = "idle" | "parsing" | "analyzing" | "done" | "error";
+
+interface ReportRecord {
+  id: string;
+  created_at: string;
+  session_id: string;
+  file_name: string;
+  report_data: any;
+}
 
 export default function UploadScreen() {
   const router = useRouter();
@@ -25,6 +34,24 @@ export default function UploadScreen() {
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [snpCount, setSnpCount] = useState(0);
+  const [history, setHistory] = useState<ReportRecord[]>([]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  async function fetchHistory() {
+    const { data, error } = await supabase
+      .from("gnome_dna_reports")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setHistory(data);
+  }
+
+  function loadHistoricalReport(record: ReportRecord) {
+    setReport(record.report_data);
+    router.push("/report");
+  }
 
   async function handleUpload() {
     try {
@@ -45,7 +72,21 @@ export default function UploadScreen() {
       setStage("analyzing");
 
       const reportResult = await getReport(parseResult.session_id);
-      setReport({ parse: parseResult, report: reportResult });
+      const fullData = { parse: parseResult, report: reportResult };
+      setReport(fullData);
+      
+      // Save to Supabase
+      const { error: insertError } = await supabase.from("gnome_dna_reports").insert({
+        session_id: parseResult.session_id,
+        file_name: file.name,
+        report_data: fullData,
+      });
+      if (insertError) {
+        console.error("Supabase insert error:", insertError);
+        Alert.alert("Database Error", "Failed to save history: " + insertError.message);
+      }
+      fetchHistory(); // refresh the list
+
       setStage("done");
 
       router.push("/report");
@@ -116,6 +157,27 @@ export default function UploadScreen() {
         {stage === "error" && (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {history.length > 0 && (
+          <View style={styles.historySection}>
+            <Text style={styles.historyTitle}>Previous Reports</Text>
+            {history.map((record) => (
+              <TouchableOpacity
+                key={record.id}
+                style={styles.historyCard}
+                onPress={() => loadHistoricalReport(record)}
+              >
+                <View style={styles.historyInfo}>
+                  <Text style={styles.historyFile}>📄 {record.file_name}</Text>
+                  <Text style={styles.historyDate}>
+                    {new Date(record.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Text style={styles.historyArrow}>→</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 
@@ -205,4 +267,21 @@ const styles = StyleSheet.create({
   },
   equityTitle: { fontSize: 16, fontWeight: "700", color: Colors.primary, marginBottom: 6 },
   equityText: { fontSize: 13, color: Colors.textPrimary, lineHeight: 20 },
+  historySection: { marginTop: 32 },
+  historyTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary, marginBottom: 12 },
+  historyCard: {
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  historyInfo: { flex: 1 },
+  historyFile: { fontSize: 15, fontWeight: "600", color: Colors.textPrimary, marginBottom: 4 },
+  historyDate: { fontSize: 13, color: Colors.textSecondary },
+  historyArrow: { fontSize: 18, color: Colors.primary, fontWeight: "bold" },
 });
