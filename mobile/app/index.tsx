@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { 
@@ -53,9 +53,18 @@ export default function UploadScreen() {
     fetchHistory();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setStage("idle");
+      setFileName("");
+      setError("");
+      fetchHistory();
+    }, [])
+  );
+
   async function fetchHistory() {
     const { data, error } = await supabase
-      .from("gnome_dna_reports")
+      .from("processed_genomic_results")
       .select("*")
       .order("created_at", { ascending: false });
     if (data) setHistory(data);
@@ -89,7 +98,7 @@ export default function UploadScreen() {
       setReport(fullData);
       
       // Save to Supabase
-      const { error: insertError } = await supabase.from("gnome_dna_reports").insert({
+      const { error: insertError } = await supabase.from("processed_genomic_results").insert({
         session_id: parseResult.session_id,
         file_name: file.name,
         report_data: fullData,
@@ -123,9 +132,9 @@ export default function UploadScreen() {
 
         {/* Upload Button */}
         <TouchableOpacity
-          style={[styles.uploadWrapper, (stage !== "idle" && stage !== "error") && styles.uploadDisabled]}
+          style={[styles.uploadWrapper, (stage === "parsing" || stage === "analyzing") && styles.uploadDisabled]}
           onPress={handleUpload}
-          disabled={stage !== "idle" && stage !== "error"}
+          disabled={stage === "parsing" || stage === "analyzing"}
           activeOpacity={0.8}
         >
           <LinearGradient
