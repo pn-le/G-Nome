@@ -6,10 +6,10 @@ pandas==2.2.3
 numpy<2.0.0,>=1.26.0
 openai==1.82.0
 weasyprint==63.1
-mediapipe==0.10.21
+mediapipe>=0.10.30
 transformers==4.52.3
-torch==2.7.0
-torchvision==0.22.0
+torch>=2.9.0
+torchvision>=0.20.0
 Pillow==11.2.1
 pytest==8.3.5
 httpx==0.28.1

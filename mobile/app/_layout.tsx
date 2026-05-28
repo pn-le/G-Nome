@@ -54,6 +54,15 @@ export default function RootLayout() {
             name="report"
             options={{ title: "Your Report", headerBackTitle: "Back" }}
           />
+          <Stack.Screen
+            name="profile"
+            options={{
+              title: "Mii Studio",
+              headerBackTitle: "Back",
+              headerStyle: { backgroundColor: "#0B1020" },
+              headerTintColor: "#FFFFFF",
+            }}
+          />
         </Stack>
       </ReportContext.Provider>
     </PaperProvider>

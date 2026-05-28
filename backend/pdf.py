@@ -1,7 +1,17 @@
 """PDF export via weasyprint — renders the report as a downloadable health passport."""
 
 import io
+import os
+import sys
 from datetime import datetime
+
+# WeasyPrint needs GLib C libraries — ensure Homebrew lib path is visible on macOS
+if sys.platform == "darwin":
+    _brew_lib = "/opt/homebrew/lib"
+    _env_key = "DYLD_FALLBACK_LIBRARY_PATH"
+    _current = os.environ.get(_env_key, "")
+    if _brew_lib not in _current:
+        os.environ[_env_key] = f"{_brew_lib}:{_current}" if _current else _brew_lib
 
 try:
     from weasyprint import HTML

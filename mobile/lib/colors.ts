@@ -12,6 +12,7 @@ export const Colors = {
   textPrimary: "#F8FAFC", // Off-white text
   textSecondary: "#94A3B8", // Slate text
   textMuted: "#475569",    // Dark slate text
+  textTertiary: "#94A3B8",
   border: "#1E293B",       // Subtle border
   cardBg: "rgba(17, 24, 39, 0.7)", // Semi-transparent card
   disclaimerBg: "rgba(251, 191, 36, 0.1)", // Amber tint
