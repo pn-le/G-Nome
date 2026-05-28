@@ -68,10 +68,10 @@ export default function PlanScreen({ onBack }: Props) {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>← Dashboard</Text>
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: serifBold }]}>7-Day Plan</Text>
-        <View style={{width: 50}} />
+        <Text style={[styles.title, { fontFamily: serifBold }]}>Your 7-Day Plan</Text>
+        <Text style={[styles.subtitle, { fontFamily: serif }]}>Based on your genomic profile</Text>
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
@@ -138,7 +138,7 @@ const renderBold = (text: string, boldFont?: string, regFont?: string) => {
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <Text key={i} style={{ fontFamily: boldFont, color: C.olive }}>{part.slice(2, -2)}</Text>;
+      return <Text key={i} style={{ fontFamily: boldFont, color: C.primary }}>{part.slice(2, -2)}</Text>;
     }
     return <Text key={i} style={{ fontFamily: regFont }}>{part}</Text>;
   });
@@ -146,39 +146,75 @@ const renderBold = (text: string, boldFont?: string, regFont?: string) => {
 
 const SimpleMarkdown = ({ content, serifBold, serif }: { content: string, serifBold?: string, serif?: string }) => {
   const lines = content.split('\n');
-  
+  const sections: { title: string, content: string[] }[] = [];
+  let currentSection = { title: '', content: [] as string[] };
+
+  lines.forEach(line => {
+    if (line.startsWith('## ')) {
+      if (currentSection.title || currentSection.content.length > 0) sections.push(currentSection);
+      currentSection = { title: line.replace(/^## /, ''), content: [] };
+    } else {
+      currentSection.content.push(line);
+    }
+  });
+  if (currentSection.title || currentSection.content.length > 0) sections.push(currentSection);
+
+  const renderLines = (lines: string[]) => {
+    return lines.map((line, idx) => {
+      const key = `line-${idx}`;
+      const trimmed = line.trim();
+      
+      if (trimmed.startsWith('# ')) {
+        return <Text key={key} style={[styles.mdH1, { fontFamily: serifBold }]}>{trimmed.replace(/^# /, '')}</Text>;
+      }
+      if (trimmed.startsWith('### ')) {
+        const title = trimmed.replace(/^### /, '');
+        let emoji = '🍽️';
+        const lower = title.toLowerCase();
+        if (lower.includes('breakfast')) emoji = '🌅';
+        else if (lower.includes('lunch')) emoji = '🥗';
+        else if (lower.includes('dinner')) emoji = '🌙';
+        else if (lower.includes('snack')) emoji = '🍎';
+
+        return (
+          <View key={key} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8, gap: 8 }}>
+            <Text style={{ fontSize: 16 }}>{emoji}</Text>
+            <Text style={[styles.mdH3, { fontFamily: serifBold, marginTop: 0, marginBottom: 0 }]}>{title}</Text>
+          </View>
+        );
+      }
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const text = trimmed.substring(2);
+        return (
+          <View key={key} style={styles.mdBulletRow}>
+            <View style={styles.mdBullet} />
+            <Text style={[styles.mdText, { flex: 1, fontFamily: serif }]}>{renderBold(text, serifBold, serif)}</Text>
+          </View>
+        );
+      }
+      
+      if (trimmed === '') return <View key={key} style={{ height: 6 }} />;
+      
+      return <Text key={key} style={[styles.mdText, { fontFamily: serif, marginBottom: 6 }]}>{renderBold(trimmed, serifBold, serif)}</Text>;
+    });
+  };
+
   return (
     <View>
-      {lines.map((line, idx) => {
-        const key = `line-${idx}`;
-        const trimmed = line.trim();
-        
-        if (trimmed.startsWith('# ')) {
-          return <Text key={key} style={[styles.mdH1, { fontFamily: serifBold }]}>{trimmed.replace(/^# /, '')}</Text>;
+      {sections.map((sec, idx) => {
+        if (!sec.title) {
+          return <View key={`sec-${idx}`}>{renderLines(sec.content)}</View>;
         }
-        if (trimmed.startsWith('## ')) {
-          return (
-            <View key={key} style={styles.mdH2Box}>
-               <Text style={[styles.mdH2, { fontFamily: serifBold }]}>{trimmed.replace(/^## /, '')}</Text>
+        return (
+          <View key={`sec-${idx}`} style={styles.dayCard}>
+            <View style={styles.dayCardHeader}>
+              <Text style={[styles.dayCardTitle, { fontFamily: serifBold }]}>{sec.title}</Text>
             </View>
-          );
-        }
-        if (trimmed.startsWith('### ')) {
-          return <Text key={key} style={[styles.mdH3, { fontFamily: serifBold }]}>{trimmed.replace(/^### /, '')}</Text>;
-        }
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          const text = trimmed.substring(2);
-          return (
-            <View key={key} style={styles.mdBulletRow}>
-              <View style={styles.mdBullet} />
-              <Text style={[styles.mdText, { flex: 1, fontFamily: serif }]}>{renderBold(text, serifBold, serif)}</Text>
+            <View style={styles.dayCardBody}>
+              {renderLines(sec.content)}
             </View>
-          );
-        }
-        
-        if (trimmed === '') return <View key={key} style={{ height: 12 }} />;
-        
-        return <Text key={key} style={[styles.mdText, { fontFamily: serif, marginBottom: 8 }]}>{renderBold(trimmed, serifBold, serif)}</Text>;
+          </View>
+        );
       })}
     </View>
   );
@@ -187,20 +223,18 @@ const SimpleMarkdown = ({ content, serifBold, serif }: { content: string, serifB
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 12,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderColor: C.border,
   },
-  backBtn: { padding: 8 },
-  backText: { color: C.secondary, fontSize: 16 },
-  title: { fontSize: 20, color: C.primary },
+  backBtn: { padding: 8, alignSelf: 'flex-start', marginBottom: 4 },
+  backText: { color: C.primary, fontSize: 14, fontWeight: '500' },
+  title: { fontSize: 24, color: C.primary, marginBottom: 4 },
+  subtitle: { fontSize: 12, color: C.secondary },
   body: { flex: 1 },
-  content: { padding: 24, flexGrow: 1, paddingBottom: 60 },
+  content: { padding: 18, flexGrow: 1, paddingBottom: 60 },
   center: { alignItems: 'center', justifyContent: 'center', flex: 1, marginTop: 40 },
   heading: { fontSize: 24, color: C.primary, marginBottom: 12, textAlign: 'center' },
   desc: { fontSize: 16, color: C.secondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 },
@@ -223,10 +257,29 @@ const styles = StyleSheet.create({
   
   // Markdown Styles
   mdH1: { fontSize: 26, color: C.primary, marginBottom: 16, marginTop: 12, textAlign: 'center' },
-  mdH2Box: { backgroundColor: C.lightGreen, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginTop: 24, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: C.green },
-  mdH2: { fontSize: 20, color: C.olive },
-  mdH3: { fontSize: 17, color: C.primary, marginTop: 16, marginBottom: 8 },
-  mdText: { fontSize: 16, color: C.secondary, lineHeight: 24 },
+  mdH3: { fontSize: 16, color: C.primary, marginTop: 16, marginBottom: 8 },
+  mdText: { fontSize: 14, color: C.primary, lineHeight: 22 },
   mdBulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6, paddingLeft: 8 },
-  mdBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green, marginTop: 10, marginRight: 10 },
+  mdBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green, marginTop: 8, marginRight: 10 },
+  
+  dayCard: {
+    backgroundColor: C.surface,
+    borderRadius: 14,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  dayCardHeader: {
+    backgroundColor: C.olive,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dayCardTitle: {
+    color: C.surface,
+    fontSize: 18,
+  },
+  dayCardBody: {
+    padding: 16,
+    paddingTop: 4,
+  },
 });

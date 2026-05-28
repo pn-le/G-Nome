@@ -502,10 +502,10 @@ export default function CulturalPlanScreen({ onBack }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>← Dashboard</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { fontFamily: serifBold }]}>Cultural Nutrition</Text>
-        <View style={{ width: 50 }} />
+        <Text style={[styles.subtitle, { fontFamily: serif }]}>Cuisine-aware food recs from your DNA</Text>
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
@@ -680,13 +680,13 @@ export default function CulturalPlanScreen({ onBack }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16,
     borderBottomWidth: 1, borderColor: C.border,
   },
-  backBtn: { padding: 8 },
-  backText: { color: C.secondary, fontSize: 16 },
-  title: { fontSize: 20, color: C.primary },
+  backBtn: { padding: 8, alignSelf: 'flex-start', marginBottom: 4 },
+  backText: { color: C.primary, fontSize: 14, fontWeight: '500' },
+  title: { fontSize: 24, color: C.primary, marginBottom: 4 },
+  subtitle: { fontSize: 12, color: C.secondary },
   body: { flex: 1 },
   content: { padding: 20 },
 

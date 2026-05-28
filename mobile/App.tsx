@@ -70,7 +70,7 @@ function AppInner() {
             <TreeScreen onTabPress={handleTabPress} />
           )}
           {activeTab === 'reports' && (
-            <ReportsScreen initialTab={reportTab} onTabPress={handleTabPress} />
+            <ReportsScreen initialTab={reportTab} onTabPress={handleTabPress} onBack={() => setActiveTab('home')} />
           )}
           {activeTab === 'scan' && (
             <ScanScreen

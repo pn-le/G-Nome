@@ -44,31 +44,25 @@ export default function ProfileScreen({ onTabPress }: Props) {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <View style={styles.header}>
-          <Text style={[styles.pageTitle, { fontFamily: serifBold }]}>Profile</Text>
-        </View>
-
-        {/* ── Avatar + name card ──────────────────────────────────────── */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={[styles.avatarInitial, { fontFamily: serifBold }]}>A</Text>
+        {/* ── Header / Centered Profile ──────────────────────────────── */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarLarge}>
+            <Text style={[styles.avatarInitialLarge, { fontFamily: serifBold }]}>A</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.name, { fontFamily: serifBold }]}>Alex Johnson</Text>
-            <Text style={[styles.email, { fontFamily: serif }]}>alex@example.com</Text>
-          </View>
-          <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
-            <Text style={[styles.editBtnText, { fontFamily: serifBold }]}>Edit</Text>
+          <Text style={[styles.nameCentered, { fontFamily: serifBold }]}>Alex Johnson</Text>
+          <Text style={[styles.emailCentered, { fontFamily: serif }]}>alex@example.com</Text>
+          <TouchableOpacity style={styles.editBtnCentered} activeOpacity={0.7}>
+            <Text style={[styles.editBtnText, { fontFamily: serifBold }]}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Health score summary ────────────────────────────────────── */}
+        {/* ── Stats grid ────────────────────────────────────────────── */}
         <View style={styles.statsRow}>
           {[
-            { val: '72',   label: 'Health Score',  color: C.green },
-            { val: '4M+',  label: 'SNPs Analyzed', color: C.olive },
-            { val: '3',    label: 'Reports Ready',  color: '#4A90F9' },
+            { val: '20k+', label: 'Genes',      color: C.green },
+            { val: '14',   label: 'Conditions', color: C.olive },
+            { val: '42',   label: 'Traits',     color: '#4A90F9' },
+            { val: '3',    label: 'Scans',      color: C.red },
           ].map(s => (
             <View key={s.label} style={styles.statBox}>
               <Text style={[styles.statVal, { fontFamily: serifBold, color: s.color }]}>{s.val}</Text>
@@ -90,27 +84,36 @@ export default function ProfileScreen({ onTabPress }: Props) {
           </View>
         </View>
 
-        {/* ── Settings sections ───────────────────────────────────────── */}
-        {SETTINGS.map(section => (
-          <View key={section.section} style={styles.settingsSection}>
-            <Text style={[styles.sectionLabel, { fontFamily: serifBold }]}>{section.section}</Text>
-            <View style={styles.settingsCard}>
-              {section.items.map((item, i) => (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.settingsRow,
-                    i < section.items.length - 1 && styles.settingsRowBorder,
-                  ]}
-                  activeOpacity={0.6}
-                >
-                  <Text style={[styles.settingsItem, { fontFamily: serif }]}>{item}</Text>
-                  <Text style={[styles.chevron, { fontFamily: serif }]}>›</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        {/* ── Achievements (Mock) ─────────────────────────────────────── */}
+        <View style={styles.achievementsSection}>
+          <Text style={[styles.sectionTitle, { fontFamily: serifBold }]}>Achievements</Text>
+          <View style={styles.achievementsGrid}>
+            {['🧬', '🥦', '🏃', '🌙', '💧'].map((emoji, i) => (
+              <View key={i} style={styles.achievementBadge}>
+                <Text style={styles.achievementEmoji}>{emoji}</Text>
+              </View>
+            ))}
           </View>
-        ))}
+        </View>
+
+        {/* ── Action List ─────────────────────────────────────────────── */}
+        <View style={styles.settingsSection}>
+          <View style={styles.settingsCard}>
+            {['Export Health Data', 'Share with Doctor', 'Delete Account'].map((item, i) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.settingsRow,
+                  i < 2 && styles.settingsRowBorder,
+                ]}
+                activeOpacity={0.6}
+              >
+                <Text style={[styles.settingsItem, { fontFamily: serif, color: item === 'Delete Account' ? C.red : C.primary }]}>{item}</Text>
+                <Text style={[styles.chevron, { fontFamily: serif }]}>›</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* ── Sign out ────────────────────────────────────────────────── */}
         <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.7}>
@@ -129,45 +132,34 @@ const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: C.bg },
   content: { paddingHorizontal: 18, paddingBottom: 16 },
 
-  header:    { paddingTop: 16, paddingBottom: 12 },
-  pageTitle: { fontSize: 21, color: C.primary },
-
-  // Profile card
-  profileCard: {
-    backgroundColor: C.surface,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
+  // Centered Profile Header
+  profileHeader: {
     alignItems: 'center',
-    gap: 14,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 3,
+    paddingTop: 30,
+    paddingBottom: 24,
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  avatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: C.lightOlive,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 12,
   },
-  avatarInitial: { fontSize: 22, color: C.olive },
-  name:  { fontSize: 16, color: C.primary, marginBottom: 2 },
-  email: { fontSize: 11, color: C.secondary },
-  editBtn: {
+  avatarInitialLarge: { fontSize: 36, color: C.olive },
+  nameCentered:  { fontSize: 24, color: C.primary, marginBottom: 4 },
+  emailCentered: { fontSize: 14, color: C.secondary, marginBottom: 16 },
+  editBtnCentered: {
     backgroundColor: C.lightGreen,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
   },
-  editBtnText: { fontSize: 11, color: C.green },
+  editBtnText: { fontSize: 13, color: C.green },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   statBox: {
     flex: 1,
     backgroundColor: C.surface,
@@ -180,8 +172,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  statVal:   { fontSize: 20 },
-  statLabel: { fontSize: 8, color: C.secondary, marginTop: 3, textAlign: 'center' },
+  statVal:   { fontSize: 18 },
+  statLabel: { fontSize: 10, color: C.secondary, marginTop: 4, textAlign: 'center' },
 
   // DNA card
   dnaCard: {
@@ -189,7 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     flexDirection: 'row',
     overflow: 'hidden',
-    marginBottom: 18,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -197,28 +189,33 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   dnaAccent:  { width: 4 },
-  dnaContent: { flex: 1, padding: 12 },
-  dnaTitle:   { fontSize: 13, color: C.primary, marginBottom: 2 },
-  dnaSource:  { fontSize: 10, color: C.secondary },
-  dnaDate:    { fontSize: 10, color: C.secondary },
+  dnaContent: { flex: 1, padding: 14 },
+  dnaTitle:   { fontSize: 15, color: C.primary, marginBottom: 4 },
+  dnaSource:  { fontSize: 12, color: C.secondary, marginBottom: 2 },
+  dnaDate:    { fontSize: 12, color: C.secondary },
   dnaBadge: {
     backgroundColor: C.lightGreen,
-    margin: 12,
+    margin: 14,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
     alignSelf: 'center',
   },
-  dnaBadgeText: { fontSize: 8, color: C.green },
+  dnaBadgeText: { fontSize: 10, color: C.green, letterSpacing: 0.5 },
+
+  // Achievements
+  achievementsSection: { marginBottom: 24 },
+  sectionTitle: { fontSize: 18, color: C.primary, marginBottom: 12 },
+  achievementsGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
+  achievementBadge: {
+    width: 50, height: 50, borderRadius: 25, backgroundColor: C.surface,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  achievementEmoji: { fontSize: 24 },
 
   // Settings
-  settingsSection: { marginBottom: 14 },
-  sectionLabel: {
-    fontSize: 10,
-    color: C.secondary,
-    marginBottom: 6,
-    letterSpacing: 0.3,
-  },
+  settingsSection: { marginBottom: 20 },
   settingsCard: {
     backgroundColor: C.surface,
     borderRadius: 12,
@@ -233,19 +230,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   settingsRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
   },
-  settingsItem: { fontSize: 13, color: C.primary },
-  chevron:      { fontSize: 18, color: C.light },
+  settingsItem: { fontSize: 15, color: C.primary },
+  chevron:      { fontSize: 20, color: C.light },
 
   // Sign out
   signOutBtn: {
-    height: 46,
+    height: 50,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: C.red,
@@ -254,5 +251,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-  signOutText: { fontSize: 14, color: C.red },
+  signOutText: { fontSize: 15, color: C.red },
 });

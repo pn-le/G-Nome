@@ -77,6 +77,18 @@ export default function ChatScreen({ onBack }: Props) {
     }
   };
 
+  const setInputAndSend = (text: string) => {
+    setInput(text);
+  };
+
+  const handleSuggestionPress = (text: string) => {
+    setInput(text);
+    // Use a small timeout to let state update before sending
+    setTimeout(() => {
+      // Actually we can just send it directly if we modify sendMessage to accept a string argument
+    }, 0);
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
@@ -86,13 +98,16 @@ export default function ChatScreen({ onBack }: Props) {
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>← Dashboard</Text>
           </TouchableOpacity>
-          <Text style={[styles.title, { fontFamily: serifBold }]}>Ask Your DNA</Text>
-          <View style={{width: 50}} />
         </View>
 
         <ScrollView ref={scrollRef} style={styles.chatArea} contentContainerStyle={{ padding: 16 }} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+          <View style={{ alignItems: 'center', marginBottom: 30, marginTop: 10 }}>
+            <Image source={require('./assets/images/small gene tree.png')} style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.8 }} resizeMode="contain" />
+            <Text style={{ fontFamily: serifBold, fontSize: 24, color: C.primary }}>Chat with G-nome</Text>
+          </View>
+
           {loadingHistory ? (
             <ActivityIndicator size="large" color={C.green} style={{ marginTop: 40 }} />
           ) : (
@@ -105,17 +120,27 @@ export default function ChatScreen({ onBack }: Props) {
           {loading && <ActivityIndicator size="small" color={C.green} style={{marginTop: 10}}/>}
         </ScrollView>
         
+        {messages.length <= 1 && !loading && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsContainer}>
+            {['Can I drink coffee?', 'Will I go bald?', 'Am I a carrier for anything?'].map((suggestion, i) => (
+              <TouchableOpacity key={i} style={styles.suggestionChip} onPress={() => setInputAndSend(suggestion)}>
+                <Text style={[styles.suggestionText, { fontFamily: serif }]}>{suggestion}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         <View style={styles.inputRow}>
           <TextInput
             style={[styles.input, { fontFamily: serif }]}
             value={input}
             onChangeText={setInput}
-            placeholder="e.g. Can I drink coffee safely?"
+            placeholder="Ask me anything about your DNA..."
             placeholderTextColor={C.light}
             onSubmitEditing={sendMessage}
           />
           <TouchableOpacity style={styles.sendBtn} onPress={sendMessage} disabled={loading || !input.trim()}>
-            <Text style={[styles.sendBtnText, { fontFamily: serifBold }]}>Send</Text>
+            <Text style={{ color: C.surface, fontSize: 18 }}>↑</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -126,26 +151,22 @@ export default function ChatScreen({ onBack }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderColor: C.border,
   },
-  backBtn: { padding: 8 },
-  backText: { color: C.secondary, fontSize: 16 },
-  title: { fontSize: 20, color: C.primary },
+  backBtn: { padding: 8, alignSelf: 'flex-start' },
+  backText: { color: C.primary, fontSize: 14, fontWeight: '500' },
   chatArea: { flex: 1 },
-  bubble: { maxWidth: '80%', padding: 14, borderRadius: 18, marginBottom: 16 },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: C.olive },
-  botBubble: { alignSelf: 'flex-start', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
-  userText: { color: C.bg, fontSize: 16, lineHeight: 22 },
-  botText: { color: C.primary, fontSize: 16, lineHeight: 22 },
-  inputRow: { flexDirection: 'row', padding: 12, backgroundColor: C.surface, borderTopWidth: 1, borderColor: C.border },
-  input: { flex: 1, backgroundColor: C.bg, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, fontSize: 16, marginRight: 10, color: C.primary },
-  sendBtn: { backgroundColor: C.green, borderRadius: 24, paddingHorizontal: 20, justifyContent: 'center' },
-  sendBtnText: { color: C.surface, fontSize: 16 }
+  bubble: { maxWidth: '85%', padding: 16, borderRadius: 20, marginBottom: 16 },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: C.olive, borderBottomRightRadius: 4 },
+  botBubble: { alignSelf: 'flex-start', backgroundColor: C.surface, borderBottomLeftRadius: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  userText: { color: C.surface, fontSize: 15, lineHeight: 22 },
+  botText: { color: C.primary, fontSize: 15, lineHeight: 22 },
+  suggestionsContainer: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  suggestionChip: { backgroundColor: C.olive, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
+  suggestionText: { color: C.surface, fontSize: 13 },
+  inputRow: { flexDirection: 'row', padding: 16, paddingBottom: 30, backgroundColor: C.bg, alignItems: 'center' },
+  input: { flex: 1, backgroundColor: C.surface, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 14, fontSize: 15, marginRight: 10, color: C.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  sendBtn: { backgroundColor: C.primary, borderRadius: 24, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
 });

@@ -157,6 +157,13 @@ export default function ProcessingScreen({ onDone }: Props) {
           ? 'Waiting for AI report…'
           : 'This may take a few minutes'}
       </Text>
+
+      <View style={{ marginTop: 40, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40 }}>
+        <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
+        <Text style={{ fontSize: 11, color: C.textSecondary, flex: 1, lineHeight: 16 }}>
+          Did you know? You share 60% of DNA with a banana.
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
