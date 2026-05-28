@@ -7,13 +7,14 @@ import DashboardScreen from './DashboardScreen';
 import ReportsScreen from './ReportsScreen';
 import TreeScreen from './TreeScreen';
 import ScanScreen from './ScanScreen';
+import ScanMedicineScreen from './ScanMedicineScreen';
 import ProfileScreen from './ProfileScreen';
 import ChatScreen from './ChatScreen';
 import PlanScreen from './PlanScreen';
 import CulturalPlanScreen from './CulturalPlanScreen';
 import { TabKey } from './BottomNav';
 
-type AppScreen = 'upload' | 'processing' | 'main' | 'chat' | 'plan' | 'cultural';
+type AppScreen = 'upload' | 'processing' | 'main' | 'chat' | 'plan' | 'cultural' | 'scan-medicine';
 
 function AppInner() {
   const { error, reset } = useApp();
@@ -72,7 +73,11 @@ function AppInner() {
             <ReportsScreen initialTab={reportTab} onTabPress={handleTabPress} />
           )}
           {activeTab === 'scan' && (
-            <ScanScreen onTabPress={handleTabPress} onNewUpload={() => setAppScreen("upload")} />
+            <ScanScreen
+              onTabPress={handleTabPress}
+              onNewUpload={() => setAppScreen('upload')}
+              onScanMedicine={() => setAppScreen('scan-medicine')}
+            />
           )}
           {activeTab === 'profile' && (
             <ProfileScreen onTabPress={handleTabPress} />
@@ -90,6 +95,10 @@ function AppInner() {
 
       {appScreen === 'cultural' && (
         <CulturalPlanScreen onBack={() => setAppScreen('main')} />
+      )}
+
+      {appScreen === 'scan-medicine' && (
+        <ScanMedicineScreen onBack={() => setAppScreen('main')} />
       )}
     </View>
   );

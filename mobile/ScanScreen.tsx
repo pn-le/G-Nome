@@ -7,401 +7,422 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Dimensions,
   Alert,
-  SafeAreaView
+  SafeAreaView,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import { useFonts } from 'expo-font';
-import { InriaSerif_400Regular, InriaSerif_700Bold } from '@expo-google-fonts/inria-serif';
+import { useFonts } from "expo-font";
+import {
+  PlayfairDisplay_700Bold,
+} from "@expo-google-fonts/playfair-display";
+import {
+  InriaSerif_400Regular,
+} from "@expo-google-fonts/inria-serif";
 
 import { useApp } from "./lib/AppContext";
-import { Colors } from "./lib/colors";
-import { SectionCard } from "./components/SectionCard";
 import { RiskMeter } from "./components/RiskMeter";
 import { EquityBadge } from "./components/EquityBadge";
-import { Disclaimer } from "./components/Disclaimer";
 import { analyzeSelfie, analyzeSkin, getScans } from "./lib/api";
 import { ScanResult } from "./lib/types";
-import BottomNav, { TabKey } from './BottomNav';
+import BottomNav, { TabKey } from "./BottomNav";
 
 interface Props {
   onTabPress: (tab: TabKey) => void;
   onNewUpload?: () => void;
+  onScanMedicine?: () => void;
 }
 
 const C = {
-  bg:        '#F7F6F2',
-  surface:   '#FFFFFF',
-  primary:   '#1A1B14',
-  secondary: '#686760',
-  green:     '#44A353',
-  olive:     '#363E28',
-  lightGreen:'#EEF2E9',
-  border:    '#E5E2DB',
-  lightOlive:'#DAE4CF',
+  bg:         "#F7F6F2",
+  surface:    "#FFFFFF",
+  primary:    "#1A1B14",
+  secondary:  "#686760",
+  green:      "#44A353",
+  olive:      "#363E28",
+  purple:     "#9966FE",
+  orange:     "#F5A62B",
+  border:     "#E5E2DB",
+  lightGreen: "#EEF2EA",
+  muted:      "#A6A59F",
 };
 
-export default function ScanScreen({ onTabPress, onNewUpload }: Props) {
-  const [fontsLoaded] = useFonts({ InriaSerif_400Regular, InriaSerif_700Bold });
-  const serif     = fontsLoaded ? 'InriaSerif_400Regular' : undefined;
-  const serifBold = fontsLoaded ? 'InriaSerif_700Bold'    : undefined;
+export default function ScanScreen({ onTabPress, onNewUpload, onScanMedicine }: Props) {
+  const [fontsLoaded] = useFonts({
+    PlayfairDisplay_700Bold,
+    InriaSerif_400Regular,
+  });
+  const playfair = fontsLoaded ? "PlayfairDisplay_700Bold" : undefined;
+  const serif    = fontsLoaded ? "InriaSerif_400Regular"   : undefined;
 
   const { sessionId } = useApp();
   const [selfieResult, setSelfieResult] = useState<any>(null);
-  const [skinResult, setSkinResult] = useState<any>(null);
-  const [loading, setLoading] = useState<"selfie" | "skin" | null>(null);
-  const [selfieImage, setSelfieImage] = useState<string | null>(null);
-  const [skinImage, setSkinImage] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
-  const [history, setHistory] = useState<ScanResult[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [skinResult,   setSkinResult]   = useState<any>(null);
+  const [loading,      setLoading]      = useState<"selfie" | "skin" | null>(null);
+  const [selfieImage,  setSelfieImage]  = useState<string | null>(null);
+  const [skinImage,    setSkinImage]    = useState<string | null>(null);
+  const [history,      setHistory]      = useState<ScanResult[]>([]);
 
   const fetchHistory = async () => {
     if (!sessionId) return;
-    setLoadingHistory(true);
     try {
       const scans = await getScans(sessionId);
       setHistory(scans);
-    } catch (err) {
-      console.warn("Failed to fetch scan history", err);
-    } finally {
-      setLoadingHistory(false);
-    }
+    } catch {}
   };
 
-  useEffect(() => {
-    fetchHistory();
-  }, [sessionId]);
+  useEffect(() => { fetchHistory(); }, [sessionId]);
 
   async function pickAndAnalyze(type: "selfie" | "skin") {
     if (!sessionId) {
-      setErrorMsg('No active session. Please upload a report first.');
+      Alert.alert("No session", "Upload a DNA report first.");
       return;
     }
-    setErrorMsg(null);
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['image/jpeg', 'image/png', 'image/jpg'],
+      type: ["image/jpeg", "image/png", "image/jpg"],
       copyToCacheDirectory: true,
       multiple: false,
     });
     if (result.canceled) return;
 
-    const uri = result.assets[0].uri;
+    const uri     = result.assets[0].uri;
     const webFile = (result.assets[0] as any).file;
     setLoading(type);
 
     try {
       if (type === "selfie") {
         setSelfieImage(uri);
-        const res = await analyzeSelfie(sessionId, uri, webFile);
-        setSelfieResult(res);
+        setSelfieResult(await analyzeSelfie(sessionId, uri, webFile));
       } else {
         setSkinImage(uri);
-        const res = await analyzeSkin(sessionId, uri, webFile);
-        setSkinResult(res);
+        setSkinResult(await analyzeSkin(sessionId, uri, webFile));
       }
     } catch (err: any) {
-      console.error(err);
-      Alert.alert("Error", err.message || "Failed to analyze.");
+      Alert.alert("Error", err.message || "Analysis failed.");
     } finally {
       setLoading(null);
-      fetchHistory(); // Refresh history after scan
+      fetchHistory();
     }
   }
 
   return (
-    <SafeAreaView style={styles.root}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { fontFamily: serifBold }]}>CV Scan</Text>
-      </View>
+    <SafeAreaView style={s.root}>
+      <ScrollView contentContainerStyle={s.scroll}>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.subheading, { fontFamily: serif }]}>Computer vision + genetic fusion</Text>
+        {/* ── Header ── */}
+        <Text style={[s.title, { fontFamily: playfair }]}>Scan</Text>
+        <Text style={[s.subtitle, { fontFamily: serif }]}>Choose a scan mode</Text>
 
-        {errorMsg && <Text style={{color: 'red', textAlign: 'center', marginBottom: 10, fontFamily: serifBold}}>{errorMsg}</Text>}
-        {/* Selfie Section */}
-        <SectionCard
-          title="Selfie Phenotype Check"
-          subtitle="Compare your DNA prediction to your actual appearance"
+        {/* ── Scan Medicine ── */}
+        <TouchableOpacity
+          style={s.medicineCard}
+          activeOpacity={0.8}
+          onPress={() => onScanMedicine?.()}
         >
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => pickAndAnalyze("selfie")}
-            disabled={loading !== null}
-          >
-            <Text style={[styles.scanButtonText, { fontFamily: serifBold }]}>
-              {selfieResult ? "Upload New Selfie" : "Upload Selfie"}
-            </Text>
-          </TouchableOpacity>
-
-          {loading === "selfie" && (
-            <ActivityIndicator style={styles.loader} color={C.olive} />
-          )}
-
-          {selfieResult && (
-            <View style={styles.resultBlock}>
-              {selfieImage && (
-                <Image source={{ uri: selfieImage }} style={styles.previewImage} />
-              )}
-              <Text style={[styles.resultTitle, { fontFamily: serifBold }]}>Genetic Prediction</Text>
-              <View style={styles.predictionRow}>
-                <PredictionItem label="Eye Color" value={selfieResult.genetic_prediction.eye_color} />
-                <PredictionItem label="Hair Color" value={selfieResult.genetic_prediction.hair_color} />
-                <PredictionItem label="Skin Tone" value={selfieResult.genetic_prediction.skin_tone} />
-              </View>
-
-              {selfieResult.confidence_pct !== null && (
-                <Text style={[styles.matchText, { fontFamily: serifBold }]}>
-                  Match confidence: {selfieResult.confidence_pct}%
-                </Text>
-              )}
-
-              {selfieResult.equity_note && (
-                <View style={{ marginTop: 8 }}>
-                  <EquityBadge ancestryCode={0} ancestryLabel="Non-European" />
-                  <Text style={[styles.equityNote, { fontFamily: serif }]}>{selfieResult.equity_note}</Text>
-                </View>
-              )}
+          <View style={s.accentBar} />
+          <View style={[s.iconCircle, { backgroundColor: "#F5F0E8" }]}>
+            <Text style={s.emoji}>💊</Text>
+          </View>
+          <View style={s.cardBody}>
+            <View style={s.titleRow}>
+              <Text style={[s.cardTitle, { fontWeight: "600" }]}>Scan Medicine</Text>
+              <Badge label="NEW" color={C.green} />
             </View>
-          )}
-        </SectionCard>
-
-        {/* Skin Scan Section */}
-        <SectionCard
-          title="Skin Lesion Scanner"
-          subtitle="AI classification + MC1R genetic risk fusion"
-          disclaimer="Not a dermatological assessment. Consult a clinician for any skin concern."
-        >
-          <TouchableOpacity
-            style={[styles.scanButton, { backgroundColor: '#DB2777' }]}
-            onPress={() => pickAndAnalyze("skin")}
-            disabled={loading !== null}
-          >
-            <Text style={[styles.scanButtonText, { fontFamily: serifBold }]}>
-              {skinResult ? "Upload Another" : "Upload Mole Image"}
+            <Text style={[s.cardDesc, { fontFamily: serif }]}>
+              Scan a drug barcode to check for gene interactions and safety warnings
             </Text>
-          </TouchableOpacity>
+            <Text style={[s.cardCta, { fontFamily: serif }]}>
+              Tap to scan a medicine barcode →
+            </Text>
+          </View>
+          <Text style={s.chevron}>›</Text>
+        </TouchableOpacity>
 
-          {loading === "skin" && (
-            <ActivityIndicator style={styles.loader} color={'#DB2777'} />
-          )}
+        <View style={s.divider} />
 
-          {skinResult && (
-            <View style={styles.resultBlock}>
-              {skinImage && (
-                <Image source={{ uri: skinImage }} style={styles.previewImage} />
-              )}
-              <View style={styles.fusedRow}>
-                <RiskMeter
-                  value={skinResult.fused_risk_pct}
-                  label="fused risk"
-                  color={skinResult.color}
-                  size={100}
-                />
-                <View style={styles.fusedInfo}>
-                  <Text style={[styles.urgencyLabel, { color: skinResult.color, fontFamily: serifBold }]}>
-                    {skinResult.urgency_label}
+        {/* ── Scan Skin ── */}
+        <TouchableOpacity
+          style={[s.card, { marginTop: 8 }]}
+          activeOpacity={0.8}
+          onPress={() => pickAndAnalyze("skin")}
+          disabled={loading !== null}
+        >
+          <View style={[s.iconCircle, { backgroundColor: "#F0EEFF" }]}>
+            <Text style={s.emoji}>🔬</Text>
+          </View>
+          <View style={s.cardBody}>
+            <View style={s.titleRow}>
+              <Text style={[s.cardTitle, { fontWeight: "600" }]}>Scan Skin</Text>
+              <Badge label="BETA" color={C.purple} />
+            </View>
+            <Text style={[s.cardDesc, { fontFamily: serif }]}>
+              Scan skin for lesion analysis with MC1R genetic risk fusion
+            </Text>
+          </View>
+          {loading === "skin"
+            ? <ActivityIndicator color={C.purple} size="small" />
+            : <Text style={s.chevron}>›</Text>
+          }
+        </TouchableOpacity>
+
+        {/* ── Scan Face ── */}
+        <TouchableOpacity
+          style={[s.card, { marginTop: 8 }]}
+          activeOpacity={0.8}
+          onPress={() => pickAndAnalyze("selfie")}
+          disabled={loading !== null}
+        >
+          <View style={[s.iconCircle, { backgroundColor: "#EAF0FB" }]}>
+            <Text style={s.emoji}>🧬</Text>
+          </View>
+          <View style={s.cardBody}>
+            <View style={s.titleRow}>
+              <Text style={[s.cardTitle, { fontWeight: "600" }]}>Scan Face</Text>
+            </View>
+            <Text style={[s.cardDesc, { fontFamily: serif }]}>
+              Upload a selfie to compare DNA-predicted vs. actual phenotype
+            </Text>
+          </View>
+          {loading === "selfie"
+            ? <ActivityIndicator color={C.olive} size="small" />
+            : <Text style={s.chevron}>›</Text>
+          }
+        </TouchableOpacity>
+
+        {/* ── Skin result ── */}
+        {skinResult && (
+          <View style={[s.resultCard]}>
+            <View style={s.resultHeader}>
+              <Text style={[s.cardTitle, { fontWeight: "600" }]}>Skin Scan Result</Text>
+              <Text style={{ fontSize: 11, color: skinResult.color, fontWeight: "700" }}>
+                {skinResult.urgency_label}
+              </Text>
+            </View>
+            {skinImage && (
+              <Image source={{ uri: skinImage }} style={s.preview} />
+            )}
+            <View style={s.fusedRow}>
+              <RiskMeter
+                value={skinResult.fused_risk_pct}
+                label="fused risk"
+                color={skinResult.color}
+                size={88}
+              />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                {skinResult.mc1r_variant_detected && (
+                  <Text style={{ fontSize: 11, color: C.orange, marginBottom: 4 }}>
+                    MC1R variant · {skinResult.genetic_multiplier}× multiplier applied
                   </Text>
-                  {skinResult.mc1r_variant_detected && (
-                    <Text style={[styles.mc1rNote, { fontFamily: serif }]}>
-                      MC1R variant detected — {skinResult.genetic_multiplier}x risk multiplier applied
-                    </Text>
-                  )}
-                </View>
+                )}
+                <Text style={{ fontSize: 10, color: C.secondary, lineHeight: 14 }}>
+                  Not a dermatological assessment. Consult a clinician for any skin concern.
+                </Text>
               </View>
+            </View>
+          </View>
+        )}
 
-              <Text style={[styles.resultTitle, { fontFamily: serifBold }]}>Classification</Text>
-              {skinResult.classifications.slice(0, 4).map((c: any) => (
-                <View key={c.class} style={styles.classRow}>
-                  <Text style={[styles.className, { fontFamily: serif }]}>{c.label}</Text>
-                  <View style={styles.barBg}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        {
-                          width: `${c.probability_pct}%`,
-                          backgroundColor:
-                            c.class === "MEL" ? Colors.danger : Colors.primary,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[styles.classPct, { fontFamily: serifBold }]}>{c.probability_pct}%</Text>
+        {/* ── Selfie result ── */}
+        {selfieResult && (
+          <View style={[s.resultCard]}>
+            <Text style={[s.cardTitle, { fontWeight: "600", marginBottom: 10 }]}>
+              Selfie Phenotype
+            </Text>
+            {selfieImage && (
+              <Image source={{ uri: selfieImage }} style={s.preview} />
+            )}
+            <View style={s.predRow}>
+              {[
+                { label: "Eye",  value: selfieResult.genetic_prediction?.eye_color  },
+                { label: "Hair", value: selfieResult.genetic_prediction?.hair_color },
+                { label: "Skin", value: selfieResult.genetic_prediction?.skin_tone  },
+              ].map(p => (
+                <View key={p.label} style={s.predItem}>
+                  <Text style={{ fontSize: 9, color: C.secondary }}>{p.label}</Text>
+                  <Text style={{ fontSize: 12, color: C.primary, marginTop: 2 }}>{p.value}</Text>
                 </View>
               ))}
             </View>
-          )}
-        </SectionCard>
-
-        {/* Skin Scan History */}
-        {history.filter(s => s.scan_type === 'skin').length > 0 && (
-          <SectionCard title="Previous Skin Scans" subtitle="History of your mole / lesion scans">
-            {history.filter(s => s.scan_type === 'skin').map(scan => (
-              <View key={scan.id} style={styles.historyItem}>
-                {scan.image_url ? (
-                  <Image source={{ uri: scan.image_url }} style={styles.historyImage} />
-                ) : (
-                  <View style={styles.historyImagePlaceholder} />
-                )}
-                <View style={styles.historyContent}>
-                  <Text style={[styles.historyType, { fontFamily: serifBold }]}>Skin Lesion</Text>
-                  <Text style={[styles.historyDate, { fontFamily: serif }]}>
-                    {new Date(scan.created_at).toLocaleDateString()}
-                  </Text>
-                  <Text style={[styles.historyResult, { fontFamily: serif, color: scan.urgency === 'High' ? '#DB2777' : C.olive }]}>
-                    Urgency: {scan.urgency} · Fused: {scan.fused_score?.toFixed(0)}%
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </SectionCard>
+            {selfieResult.equity_note && (
+              <>
+                <EquityBadge ancestryCode={0} ancestryLabel="Non-European" />
+                <Text style={{ fontSize: 11, color: C.secondary, marginTop: 6, lineHeight: 16 }}>
+                  {selfieResult.equity_note}
+                </Text>
+              </>
+            )}
+          </View>
         )}
 
-        {/* Selfie Phenotype History */}
-        {history.filter(s => s.scan_type === 'selfie').length > 0 && (
-          <SectionCard title="Previous Selfie Scans" subtitle="History of your phenotype checks">
-            {history.filter(s => s.scan_type === 'selfie').map(scan => (
-              <View key={scan.id} style={styles.historyItem}>
-                {scan.image_url ? (
-                  <Image source={{ uri: scan.image_url }} style={styles.historyImage} />
-                ) : (
-                  <View style={styles.historyImagePlaceholder} />
-                )}
-                <View style={styles.historyContent}>
-                  <Text style={[styles.historyType, { fontFamily: serifBold }]}>Selfie Phenotype</Text>
-                  <Text style={[styles.historyDate, { fontFamily: serif }]}>
-                    {new Date(scan.created_at).toLocaleDateString()}
-                  </Text>
-                  <Text style={[styles.historyResult, { fontFamily: serif }]}>
-                    Concordance: {scan.concordance ?? 'N/A'}
-                  </Text>
+        {/* ── Recent Scans ── */}
+        {history.length > 0 && (
+          <>
+            <Text style={[s.sectionLabel, { fontFamily: serif }]}>Recent Scans</Text>
+            {history.slice(0, 5).map(scan => {
+              const urgency = scan.urgency ?? "Low";
+              const dotColor =
+                urgency === "Urgent" || urgency === "High" ? "#E53E3E"
+                : urgency === "Moderate" ? C.orange
+                : C.green;
+              const badgeLabel =
+                urgency === "Urgent" || urgency === "High" ? "URGENT"
+                : urgency === "Moderate" ? "WATCH"
+                : "CLEAR";
+              const label = scan.scan_type === "skin" ? "Skin Lesion Scan" : "Selfie Phenotype";
+              const ts    = new Date(scan.created_at).toLocaleDateString();
+              return (
+                <View key={scan.id} style={s.recentRow}>
+                  <View style={[s.recentDot, { backgroundColor: dotColor }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: C.primary }}>{label}</Text>
+                    <Text style={{ fontSize: 9, color: C.secondary, marginTop: 2 }}>{ts}</Text>
+                  </View>
+                  <Badge label={badgeLabel} color={dotColor} />
                 </View>
-              </View>
-            ))}
-          </SectionCard>
+              );
+            })}
+          </>
         )}
 
-        {/* Upload new file section */}
-        <SectionCard title="New Report" subtitle="Scan a different DNA kit">
-          <TouchableOpacity 
-            style={styles.btnSecondary} 
-            activeOpacity={0.8}
-            onPress={() => onNewUpload && onNewUpload()}
-          >
-            <Text style={[styles.btnSecondaryText, { fontFamily: serifBold }]}>Upload New DNA File</Text>
-          </TouchableOpacity>
-        </SectionCard>
-
+        <View style={{ height: 32 }} />
       </ScrollView>
+
       <BottomNav activeTab="scan" onTabPress={onTabPress} />
     </SafeAreaView>
   );
 }
 
-function PredictionItem({ label, value }: { label: string; value: string }) {
+function Badge({ label, color }: { label: string; color: string }) {
   return (
-    <View style={styles.predItem}>
-      <Text style={styles.predLabel}>{label}</Text>
-      <Text style={styles.predValue}>{value}</Text>
+    <View style={[s.badge, { backgroundColor: color }]}>
+      <Text style={s.badgeText}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
-  header: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8 },
-  title:  { fontSize: 24, color: '#1A1B14' },
-  container: { padding: 18, paddingBottom: 100 },
-  subheading: { fontSize: 14, color: C.secondary, marginTop: 2, marginBottom: 16 },
-  scanButton: {
-    backgroundColor: C.olive,
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
-  },
-  scanButtonText: { color: "#fff", fontSize: 15 },
-  loader: { marginTop: 16 },
-  resultBlock: { marginTop: 16 },
-  previewImage: { width: "100%", height: 180, borderRadius: 12, marginBottom: 12 },
-  resultTitle: { fontSize: 15, color: C.primary, marginBottom: 8 },
-  predictionRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
-  predItem: {
-    flex: 1,
-    backgroundColor: C.lightGreen,
-    borderRadius: 10,
-    padding: 10,
-    alignItems: "center",
-  },
-  predLabel: { fontSize: 10, color: C.secondary },
-  predValue: { fontSize: 14, color: C.primary, marginTop: 3 },
-  matchText: { fontSize: 14, color: C.olive },
-  equityNote: { fontSize: 12, color: C.secondary, marginTop: 6, lineHeight: 17 },
-  fusedRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 16 },
-  fusedInfo: { flex: 1 },
-  urgencyLabel: { fontSize: 16, marginBottom: 4 },
-  mc1rNote: { fontSize: 12, color: '#F59E0B' },
-  classRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  className: { fontSize: 11, color: C.secondary, width: 110 },
-  barBg: {
-    flex: 1,
-    height: 8,
-    backgroundColor: C.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  barFill: { height: "100%", borderRadius: 4 },
-  classPct: { fontSize: 11, color: C.primary, width: 36, textAlign: "right" },
-  btnSecondary: {
-    width: '100%',
-    height: 48,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: C.olive,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnSecondaryText: { fontSize: 14, color: C.olive },
-  historyItem: {
+const s = StyleSheet.create({
+  root:    { flex: 1, backgroundColor: C.bg },
+  scroll:  { paddingHorizontal: 20, paddingTop: 70, paddingBottom: 20 },
+  title:   { fontSize: 28, color: C.olive, fontWeight: "bold" },
+  subtitle:{ fontSize: 13, color: C.secondary, marginTop: 4, marginBottom: 18 },
+
+  // Medicine card (featured — has accent bar + CTA)
+  medicineCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.09,
+    shadowRadius: 16,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  accentBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: C.olive,
+  },
+
+  // Standard card
+  card: {
     backgroundColor: C.surface,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: C.border,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  historyImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
     marginRight: 12,
   },
-  historyImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: C.border,
+  emoji:    { fontSize: 22 },
+  cardBody: { flex: 1 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  cardTitle:{ fontSize: 15, color: C.primary },
+  cardDesc: { fontSize: 10, color: C.secondary, lineHeight: 14 },
+  cardCta:  { fontSize: 10, color: C.green, marginTop: 5 },
+  chevron:  { fontSize: 20, color: C.muted, marginLeft: 8 },
+
+  divider: {
+    height: 1,
+    backgroundColor: C.lightGreen,
+    marginTop: 0,
+    marginBottom: 0,
   },
-  historyContent: {
-    flex: 1,
+
+  badge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
   },
-  historyType: {
-    fontSize: 15,
-    color: C.primary,
-    marginBottom: 2,
-  },
-  historyDate: {
+  badgeText: { fontSize: 8, color: "#FFF", fontWeight: "700" },
+
+  sectionLabel: {
     fontSize: 12,
+    fontWeight: "600",
     color: C.secondary,
-    marginBottom: 4,
+    marginTop: 28,
+    marginBottom: 8,
   },
-  historyResult: {
-    fontSize: 13,
-    color: C.olive,
+  recentRow: {
+    backgroundColor: C.surface,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  recentDot: { width: 12, height: 12, borderRadius: 3, marginRight: 12 },
+
+  resultCard: {
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  resultHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  preview:  { width: "100%", height: 160, borderRadius: 10, marginBottom: 12 },
+  fusedRow: { flexDirection: "row", alignItems: "center" },
+  predRow:  { flexDirection: "row", gap: 8, marginTop: 4 },
+  predItem: {
+    flex: 1,
+    backgroundColor: "#EEF2E9",
+    borderRadius: 8,
+    padding: 8,
+    alignItems: "center",
   },
 });
