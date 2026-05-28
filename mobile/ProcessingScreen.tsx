@@ -4,15 +4,17 @@ import {
   StatusBar, Animated, Dimensions,
 } from 'react-native';
 import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
+import { InriaSerif_400Regular } from '@expo-google-fonts/inria-serif';
 import { getReport } from './lib/api';
 import { useApp } from './lib/AppContext';
+import { colors } from './constants/theme';
 
 const C = {
-  bg:        '#F7F6F2',
-  textSecondary: '#686760',
-  green:     '#44A353',
-  olive:     '#363E28',
-  border:    '#E5E2DB',
+  bg:           colors.bg,
+  textSecondary: colors.textSecondary,
+  green:        colors.green,
+  olive:        colors.olive,
+  border:       colors.border,
 };
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -33,7 +35,7 @@ interface Props {
 
 export default function ProcessingScreen({ onDone }: Props) {
   const { sessionId, setReport, setError } = useApp();
-  const [fontsLoaded]   = useFonts({ PlayfairDisplay_700Bold });
+  const [fontsLoaded] = useFonts({ PlayfairDisplay_700Bold, InriaSerif_400Regular });
   const [completedSteps, setCompletedSteps] = useState(0);
   const [progressPct, setProgressPct]       = useState(0);
   const [statusMsg, setStatusMsg]           = useState('');
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   circlePending: { borderWidth: 2, borderColor: '#C8C5BE', backgroundColor: 'transparent' },
   checkMark: { color: '#fff', fontSize: 10, fontWeight: '700', lineHeight: 12 },
   innerDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C8C5BE' },
-  stepText:  { fontSize: 11, color: '#1A1B14', flex: 1 },
+  stepText:  { fontSize: 11, color: colors.textPrimary, fontFamily: 'InriaSerif_400Regular', flex: 1 },
   stepTextPending: { color: C.textSecondary },
   connector: { width: 2, height: 10, backgroundColor: C.border, marginLeft: 9, marginVertical: 1 },
 
