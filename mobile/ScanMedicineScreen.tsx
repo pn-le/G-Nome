@@ -40,7 +40,7 @@ const C = {
   red:        '#E53E3E',
 };
 
-type ScanState = 'idle' | 'loading' | 'found' | 'notfound';
+type ScanState = 'idle' | 'loading' | 'found' | 'notfound' | 'error';
 
 interface DrugInfo {
   name: string;
@@ -76,58 +76,80 @@ const PGX_INSIGHTS = {
   },
 };
 
-async function lookupDrug(barcode: string): Promise<DrugInfo | null> {
+async function lookupDrug(barcode: string): Promise<{ drug: DrugInfo | null; error: string | null }> {
   const endpoints = [
-    // Try as exact package NDC
     `https://api.fda.gov/drug/ndc.json?search=package_ndc:"${barcode}"&limit=1`,
-    // Try in label database via UPC
     `https://api.fda.gov/drug/label.json?search=openfda.upc:"${barcode}"&limit=1`,
-    // Broader NDC search (strips leading zeros, tries partial match)
     `https://api.fda.gov/drug/ndc.json?search="${barcode}"&limit=1`,
   ];
 
+  let lastError: string | null = null;
+
   for (const url of endpoints) {
+    console.log('[ScanMedicine] Trying:', url);
     try {
       const res = await fetch(url);
-      if (!res.ok) continue;
+      console.log('[ScanMedicine] Response status:', res.status, url);
+
+      if (!res.ok) {
+        const body = await res.text();
+        console.log('[ScanMedicine] Non-OK body:', body.slice(0, 200));
+        lastError = `HTTP ${res.status} from FDA API`;
+        continue;
+      }
+
       const data = await res.json();
-      if (!data.results?.length) continue;
+      console.log('[ScanMedicine] Results count:', data.results?.length ?? 0);
+
+      if (!data.results?.length) {
+        lastError = `No results for barcode ${barcode}`;
+        continue;
+      }
 
       const r = data.results[0];
 
-      // NDC endpoint shape
       if (r.generic_name || r.brand_name) {
-        const generic = r.generic_name ?? '';
+        const generic  = r.generic_name ?? '';
         const strength = r.active_ingredients?.[0]?.strength ?? '';
         return {
-          name:         `${generic}${strength ? ' ' + strength : ''}`.trim() || r.brand_name,
-          brands:       r.brand_name ?? '',
-          manufacturer: r.labeler_name ?? '',
-          barcode,
+          drug: {
+            name:         `${generic}${strength ? ' ' + strength : ''}`.trim() || r.brand_name,
+            brands:       r.brand_name ?? '',
+            manufacturer: r.labeler_name ?? '',
+            barcode,
+          },
+          error: null,
         };
       }
 
-      // Label endpoint shape
       if (r.openfda) {
         const generic = r.openfda.generic_name?.[0] ?? '';
         const brand   = r.openfda.brand_name?.[0] ?? '';
         return {
-          name:         generic || brand,
-          brands:       brand,
-          manufacturer: r.openfda.manufacturer_name?.[0] ?? '',
-          barcode,
+          drug: {
+            name:         generic || brand,
+            brands:       brand,
+            manufacturer: r.openfda.manufacturer_name?.[0] ?? '',
+            barcode,
+          },
+          error: null,
         };
       }
-    } catch {}
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      console.error('[ScanMedicine] Fetch error:', msg, url);
+      lastError = msg;
+    }
   }
 
-  return null;
+  return { drug: null, error: lastError ?? 'No results found' };
 }
 
 export default function ScanMedicineScreen({ onBack }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [drug, setDrug]           = useState<DrugInfo | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const cardAnim = useRef(new Animated.Value(0)).current;
   const scanY    = useRef(new Animated.Value(0)).current;
   const scanLock = useRef(false);
@@ -171,21 +193,24 @@ export default function ScanMedicineScreen({ onBack }: Props) {
   async function handleBarcodeScan({ data }: { data: string }) {
     if (scanLock.current || scanState !== 'idle') return;
     scanLock.current = true;
+    setFetchError(null);
     setScanState('loading');
 
-    const result = await lookupDrug(data);
-    if (result) {
-      setDrug(result);
+    const { drug: found, error } = await lookupDrug(data);
+    if (found) {
+      setDrug(found);
       setScanState('found');
     } else {
+      setFetchError(error);
       setDrug({ name: 'Unknown Drug', brands: '', manufacturer: '', barcode: data });
-      setScanState('notfound');
+      setScanState(error?.toLowerCase().includes('network') || error?.toLowerCase().includes('fetch') ? 'error' : 'notfound');
     }
   }
 
   function resetScan() {
     scanLock.current = false;
     setDrug(null);
+    setFetchError(null);
     setScanState('idle');
   }
 
@@ -195,7 +220,7 @@ export default function ScanMedicineScreen({ onBack }: Props) {
     outputRange: [400, 0],
   });
 
-  const showCard = scanState === 'found' || scanState === 'notfound';
+  const showCard = scanState === 'found' || scanState === 'notfound' || scanState === 'error';
 
   return (
     <View style={s.root}>
@@ -279,14 +304,21 @@ export default function ScanMedicineScreen({ onBack }: Props) {
             {/* Drag handle */}
             <View style={s.handle} />
 
-            {scanState === 'notfound' ? (
-              /* ── Not found ── */
+            {(scanState === 'notfound' || scanState === 'error') ? (
+              /* ── Not found / error ── */
               <View style={s.notFound}>
-                <Text style={s.notFoundIcon}>🔍</Text>
-                <Text style={s.notFoundTitle}>Drug not found</Text>
-                <Text style={s.notFoundSub}>
-                  Barcode {drug?.barcode} wasn't found in the FDA database.
+                <Text style={s.notFoundIcon}>{scanState === 'error' ? '⚠️' : '🔍'}</Text>
+                <Text style={s.notFoundTitle}>
+                  {scanState === 'error' ? 'Fetch failed' : 'Drug not found'}
                 </Text>
+                <Text style={s.notFoundSub}>
+                  Barcode: {drug?.barcode}
+                </Text>
+                {fetchError ? (
+                  <View style={s.errorBox}>
+                    <Text style={s.errorText}>{fetchError}</Text>
+                  </View>
+                ) : null}
                 <TouchableOpacity style={s.scanAgainBtn} onPress={resetScan} activeOpacity={0.8}>
                   <Text style={s.scanAgainText}>Try Again</Text>
                 </TouchableOpacity>
@@ -510,4 +542,13 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
   scanAgainText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
+
+  errorBox: {
+    backgroundColor: '#FEF1F1',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 6,
+    width: '100%',
+  },
+  errorText: { fontSize: 11, color: C.red, lineHeight: 16, fontFamily: 'monospace' },
 });
