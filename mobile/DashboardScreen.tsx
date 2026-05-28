@@ -59,6 +59,7 @@ interface Props {
   onTabPress?: (tab: TabKey) => void;
   onOpenChat?: () => void;
   onOpenPlan?: () => void;
+
   onOpenCultural?: () => void;
 }
 
@@ -192,6 +193,7 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
               <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Personalized meals</Text>
             </View>
           </TouchableOpacity>
+
         </View>
         {/* Cultural Nutrition button */}
         <TouchableOpacity style={[styles.priorityCard, { marginBottom: 14, height: 80 }]} onPress={onOpenCultural} activeOpacity={0.8}>
@@ -203,6 +205,7 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
         </TouchableOpacity>
 
         {/* ── Explore Reports ─────────────────────────────────────────── */}
+
         <Text style={[styles.sectionHeader, { fontFamily: serifBold }]}>Explore Your Reports</Text>
 
         <View style={styles.reportsCard}>

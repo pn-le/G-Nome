@@ -46,6 +46,7 @@ function AppInner() {
       {appScreen === 'upload' && (
         <UploadScreen
           onFileSelected={() => setTimeout(() => setAppScreen('processing'), 400)}
+          onPastSessionSelected={() => setAppScreen('main')}
         />
       )}
 
@@ -71,7 +72,7 @@ function AppInner() {
             <ReportsScreen initialTab={reportTab} onTabPress={handleTabPress} />
           )}
           {activeTab === 'scan' && (
-            <ScanScreen onTabPress={handleTabPress} />
+            <ScanScreen onTabPress={handleTabPress} onNewUpload={() => setAppScreen("upload")} />
           )}
           {activeTab === 'profile' && (
             <ProfileScreen onTabPress={handleTabPress} />

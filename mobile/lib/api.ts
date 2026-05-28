@@ -97,6 +97,59 @@ export async function generateMealPlan(sessionId: string): Promise<string> {
   return data.plan;
 }
 
+
+
+export async function analyzeSelfie(sessionId: string, imageUri: string, webFile?: File): Promise<any> {
+  const formData = new FormData();
+  if (Platform.OS === 'web' && webFile) {
+    formData.append('image', webFile, 'selfie.jpg');
+  } else {
+    formData.append('image', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'selfie.jpg',
+    } as any);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/cv/selfie?session_id=${sessionId}`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error('Selfie analysis failed: ' + text);
+  }
+  return await res.json();
+}
+
+
+export async function analyzeSkin(sessionId: string, imageUri: string, webFile?: File): Promise<any> {
+  const formData = new FormData();
+  if (Platform.OS === 'web' && webFile) {
+    formData.append('image', webFile, 'skin.jpg');
+  } else {
+    formData.append('image', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'skin.jpg',
+    } as any);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/cv/skin?session_id=${sessionId}`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error('Skin analysis failed: ' + text);
+  }
+  return await res.json();
+}
+
+
+
 export async function getCulturalRecommendations(
   parseResult: { ancestry?: Record<string, number>; session_id?: string; source?: string; snp_count?: number; chromosomes?: number },
   report: ReportResult,

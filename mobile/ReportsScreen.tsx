@@ -191,7 +191,6 @@ function DrugsTab({ serif, serifBold }: { serif?: string; serifBold?: string }) 
             <View style={styles.cardTopRow}>
               <View>
                 <Text style={[styles.geneName, { fontFamily: serifBold }]}>{gene.gene}</Text>
-                <Text style={[styles.geneAllele, { fontFamily: serifBold }]}>{gene.metabolizer_status}</Text>
               </View>
               <Badge
                 label={(gene.status_label ?? '').toUpperCase()}

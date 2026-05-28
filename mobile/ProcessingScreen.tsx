@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useFonts, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import { getReport } from './lib/api';
+import { savePastSession } from './lib/storage';
 import { useApp } from './lib/AppContext';
 
 const C = {

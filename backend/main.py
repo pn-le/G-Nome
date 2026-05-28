@@ -13,14 +13,14 @@ from fastapi import FastAPI, File, Header, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from .parser import parse_dna_file
-from .pgx import run_pharmacogenomics
-from .prs import compute_risk_scores
-from .carrier import check_carrier_status
-from .traits import analyze_traits
-from .report import generate_report
-from .pdf import render_pdf
-from .supabase_client import get_supabase
+from parser import parse_dna_file
+from pgx import run_pharmacogenomics
+from prs import compute_risk_scores
+from carrier import check_carrier_status
+from traits import analyze_traits
+from report import generate_report
+from pdf import render_pdf
+from supabase_client import get_supabase
 
 from cultural_rag.api import router as cultural_router
 
@@ -176,6 +176,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="G-Nome API", version="0.1.0", lifespan=lifespan)
+
+app.include_router(cultural_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -406,7 +408,7 @@ Context from their report:
 async def generate_meal_plan(session_id: str, authorization: str | None = Header(None)):
     session = sessions.get(session_id)
     traits = {}
-    if "results" in session:
+    if session and "results" in session:
         traits = session["results"].get("nutrition_traits", {})
     else:
         # Fallback to Supabase if server restarted and memory is wiped
@@ -417,6 +419,9 @@ async def generate_meal_plan(session_id: str, authorization: str | None = Header
                 if res.data and len(res.data) > 0:
                     traits = res.data[0].get("report_data", {}).get("report", {}).get("nutrition_traits", {})
                     # Also restore to memory
+                    if session is None:
+                        sessions[session_id] = {}
+                        session = sessions[session_id]
                     session["results"] = res.data[0].get("report_data", {}).get("report", {})
             except Exception as e:
                 print(f"Fallback fetch failed: {e}")
