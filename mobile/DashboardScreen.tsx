@@ -55,12 +55,14 @@ const REPORT_TABS: { key: number; accent: string }[] = [
 ];
 
 interface Props {
+  onOpenReport?: (tab: number) => void;
   onTabPress?: (tab: TabKey) => void;
   onOpenChat?: () => void;
   onOpenPlan?: () => void;
+  onOpenCultural?: () => void;
 }
 
-export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, onOpenPlan }: Props) {
+export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, onOpenPlan, onOpenCultural }: Props) {
   const [fontsLoaded] = useFonts({ InriaSerif_400Regular, InriaSerif_700Bold });
   const { report, parseResult, healthScore, dominantAncestry } = useApp();
 
@@ -191,6 +193,14 @@ export default function DashboardScreen({ onOpenReport, onTabPress, onOpenChat, 
             </View>
           </TouchableOpacity>
         </View>
+        {/* Cultural Nutrition button */}
+        <TouchableOpacity style={[styles.priorityCard, { marginBottom: 14, height: 80 }]} onPress={onOpenCultural} activeOpacity={0.8}>
+          <View style={[styles.accentBar, { backgroundColor: '#0D9488' }]} />
+          <View style={{ padding: 12, justifyContent: 'center', flex: 1 }}>
+            <Text style={[styles.geneName, { fontFamily: serifBold, marginBottom: 4 }]}>🌏  Cultural Nutrition</Text>
+            <Text style={[styles.priorityDesc, { fontFamily: serif }]}>Cuisine-aware food recs from your DNA</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* ── Explore Reports ─────────────────────────────────────────── */}
         <Text style={[styles.sectionHeader, { fontFamily: serifBold }]}>Explore Your Reports</Text>

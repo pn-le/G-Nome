@@ -6,12 +6,14 @@ interface AppState {
   parseResult: ParseResult | null;
   report: ReportResult | null;
   error: string | null;
+  culture: string;
 }
 
 interface AppContextValue extends AppState {
   setParseResult: (r: ParseResult) => void;
   setReport: (r: ReportResult) => void;
   setError: (e: string | null) => void;
+  setCulture: (c: string) => void;
   reset: () => void;
   // Derived helpers
   healthScore: number;
@@ -23,6 +25,7 @@ const defaultState: AppState = {
   parseResult: null,
   report: null,
   error: null,
+  culture: '',
 };
 
 const AppContext = createContext<AppContextValue>({
@@ -30,6 +33,7 @@ const AppContext = createContext<AppContextValue>({
   setParseResult: () => {},
   setReport: () => {},
   setError: () => {},
+  setCulture: () => {},
   reset: () => {},
   healthScore: 72,
   dominantAncestry: 'Unknown',
@@ -46,6 +50,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setError = (e: string | null) =>
     setState(s => ({ ...s, error: e }));
+
+  const setCulture = (c: string) =>
+    setState(s => ({ ...s, culture: c }));
 
   const reset = () => setState(defaultState);
 
@@ -77,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setParseResult,
         setReport,
         setError,
+        setCulture,
         reset,
         healthScore,
         dominantAncestry,

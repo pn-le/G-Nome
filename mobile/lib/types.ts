@@ -98,3 +98,54 @@ export interface ReportResult {
     error?: string;
   };
 }
+
+// ── Cultural RAG types ──────────────────────────────────────────────────────
+
+export interface DietaryRecommendation {
+  condition: string;
+  advice: string;
+  culturally_relevant_foods: string[];
+  foods_to_limit: string[];
+  evidence_source: string[];
+}
+
+export interface DrugFoodInteraction {
+  drug: string;
+  interaction: string;
+  cultural_note: string;
+  evidence_source: string[];
+}
+
+export interface CulturalRecommendations {
+  cultural_profile: string;
+  culture_confirmed_by_user: boolean;
+  dietary_recommendations: DietaryRecommendation[];
+  drug_food_interactions: DrugFoodInteraction[];
+  cultural_note: string;
+  disclaimer: string;
+}
+
+export const SUPPORTED_CULTURES = [
+  'Vietnamese',
+  'Japanese',
+  'Korean',
+  'Chinese',
+  'Thai',
+  'Filipino',
+  'Indian',
+  'Pakistani',
+  'Brazilian',
+  'Mexican',
+  'German',
+  'Italian',
+  'French',
+  'Greek',
+  'Ethiopian',
+  'Nigerian',
+  'Caribbean',
+  'Middle Eastern',
+  'Turkish',
+  'Persian',
+] as const;
+
+export type SupportedCulture = (typeof SUPPORTED_CULTURES)[number] | string;

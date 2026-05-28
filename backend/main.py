@@ -13,14 +13,16 @@ from fastapi import FastAPI, File, Header, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from parser import parse_dna_file
-from pgx import run_pharmacogenomics
-from prs import compute_risk_scores
-from carrier import check_carrier_status
-from traits import analyze_traits
-from report import generate_report
-from pdf import render_pdf
-from supabase_client import get_supabase
+from .parser import parse_dna_file
+from .pgx import run_pharmacogenomics
+from .prs import compute_risk_scores
+from .carrier import check_carrier_status
+from .traits import analyze_traits
+from .report import generate_report
+from .pdf import render_pdf
+from .supabase_client import get_supabase
+
+from cultural_rag.api import router as cultural_router
 
 
 # Persistent session storage (local disk fallback)
@@ -182,6 +184,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(cultural_router, prefix="/api")
+
 
 @app.get("/api/health")
 def health():
@@ -264,7 +268,7 @@ async def report(session_id: str, authorization: str | None = Header(None)):
         _save_report_supabase(session_id, user_id, modules, llm_report)
 
     # RAG: Background embed the report for chat
-    from rag import embed_and_store_report
+    from .rag import embed_and_store_report
     import asyncio
     asyncio.create_task(embed_and_store_report(session_id, user_id or "anonymous", full_report, llm_report["full_text"]))
 
@@ -278,7 +282,7 @@ async def cv_selfie(session_id: str, image: UploadFile = File(...),
     if not session:
         raise HTTPException(404, "Session not found")
 
-    from cv_selfie import analyze_selfie
+    from .cv_selfie import analyze_selfie
 
     img_bytes = await image.read()
     result = analyze_selfie(img_bytes, session["snps"], session.get("ancestry", {}))
@@ -297,7 +301,7 @@ async def cv_skin(session_id: str, image: UploadFile = File(...),
     if not session:
         raise HTTPException(404, "Session not found")
 
-    from cv_skin import analyze_skin_lesion
+    from .cv_skin import analyze_skin_lesion
 
     img_bytes = await image.read()
     result = analyze_skin_lesion(img_bytes, session["snps"])
@@ -371,7 +375,7 @@ async def chat(session_id: str, request: Request, authorization: str | None = He
     if not message:
         raise HTTPException(400, "Message required")
         
-    from rag import rag_search, _get_client
+    from .rag import rag_search, _get_client
     
     context = await rag_search(session_id, message)
     system_prompt = f"""You are G-Nome, an AI health assistant. You are chatting with a user about their genetic health report.
@@ -420,7 +424,7 @@ async def generate_meal_plan(session_id: str, authorization: str | None = Header
     if not traits:
         raise HTTPException(404, "Session/results not found. Run report first.")
 
-    from rag import _get_client
+    from .rag import _get_client
     client = _get_client()
     if not client:
         raise HTTPException(503, "Nebius API not configured")
