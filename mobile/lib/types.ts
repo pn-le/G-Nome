@@ -103,7 +103,9 @@ export interface ReportResult {
 
 export interface DietaryRecommendation {
   condition: string;
+  summary?: string;
   advice: string;
+  key_stats?: string[];
   culturally_relevant_foods: string[];
   foods_to_limit: string[];
   evidence_source: string[];
@@ -111,8 +113,10 @@ export interface DietaryRecommendation {
 
 export interface DrugFoodInteraction {
   drug: string;
+  summary?: string;
   interaction: string;
   cultural_note: string;
+  key_stats?: string[];
   evidence_source: string[];
 }
 

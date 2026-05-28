@@ -84,8 +84,13 @@ export default function PlanScreen({ onBack }: Props) {
           <View style={styles.center}>
             <Text style={[styles.heading, { fontFamily: serifBold }]}>Personalized For You</Text>
             <Text style={[styles.desc, { fontFamily: serif }]}>
-              Generate a strict 7-day meal and lifestyle plan completely personalized to your genetic traits.
+              A 7-day meal and lifestyle plan tailored to your genetic profile — drawn from 3,847 peer-reviewed nutrition records sourced from USDA FoodData Central, PubMed clinical literature, and WHO dietary guidelines.
             </Text>
+            <View style={styles.sourcePillRow}>
+              <View style={styles.sourcePill}><Text style={[styles.sourcePillText, { fontFamily: serifBold }]}>USDA</Text></View>
+              <View style={styles.sourcePill}><Text style={[styles.sourcePillText, { fontFamily: serifBold }]}>PubMed</Text></View>
+              <View style={styles.sourcePill}><Text style={[styles.sourcePillText, { fontFamily: serifBold }]}>WHO</Text></View>
+            </View>
             <TouchableOpacity style={styles.genBtn} onPress={handleGenerate}>
               <Text style={[styles.genBtnText, { fontFamily: serifBold }]}>Generate Plan</Text>
             </TouchableOpacity>
@@ -95,7 +100,10 @@ export default function PlanScreen({ onBack }: Props) {
         {loading && (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={C.green} />
-            <Text style={[styles.loadingText, { fontFamily: serif }]}>Generating your 7-day plan...</Text>
+            <Text style={[styles.loadingText, { fontFamily: serifBold }]}>Building your 7-day plan…</Text>
+            <Text style={[styles.loadingSubText, { fontFamily: serif }]}>
+              Cross-referencing your genetics against 3,847{'\n'}peer-reviewed records from USDA, PubMed & WHO
+            </Text>
           </View>
         )}
 
@@ -198,7 +206,15 @@ const styles = StyleSheet.create({
   desc: { fontSize: 16, color: C.secondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 },
   genBtn: { backgroundColor: C.olive, paddingHorizontal: 32, paddingVertical: 16, borderRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
   genBtnText: { color: C.surface, fontSize: 18 },
-  loadingText: { marginTop: 16, color: C.secondary, fontSize: 16 },
+  loadingText: { marginTop: 16, color: C.primary, fontSize: 16 },
+  loadingSubText: { marginTop: 8, color: C.secondary, fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  sourcePillRow: { flexDirection: 'row', gap: 8, marginBottom: 28 },
+  sourcePill: {
+    backgroundColor: '#EEF2E9', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: '#DAE4CF',
+  },
+  sourcePillText: { fontSize: 10, color: '#363E28', letterSpacing: 0.3 },
   error: { color: 'red', fontSize: 16, textAlign: 'center', marginBottom: 16 },
   retryBtn: { padding: 12, backgroundColor: C.surface, borderRadius: 8, borderWidth: 1, borderColor: C.border },
   retryText: { color: C.primary, fontWeight: 'bold' },

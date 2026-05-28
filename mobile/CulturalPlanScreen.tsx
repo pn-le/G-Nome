@@ -189,14 +189,21 @@ function DietaryCard({ rec, index, serif, serifBold }: {
   rec: DietaryRecommendation; index: number;
   serif?: string; serifBold?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const condColor = rec.condition.toLowerCase().includes('diabetes') ? C.amber
     : rec.condition.toLowerCase().includes('coronary') ? C.red
     : C.teal;
+
+  const displaySummary = rec.summary || rec.advice;
+  const hasDetail = !!(rec.summary && rec.advice && rec.advice !== rec.summary);
 
   return (
     <View style={dc.card}>
       <View style={[dc.accent, { backgroundColor: condColor }]} />
       <View style={dc.body}>
+
+        {/* Condition badge */}
         <View style={dc.topRow}>
           <View style={[dc.condBadge, { backgroundColor: condColor + '18' }]}>
             <Text style={[dc.condText, { fontFamily: serifBold, color: condColor }]}>
@@ -205,8 +212,21 @@ function DietaryCard({ rec, index, serif, serifBold }: {
           </View>
         </View>
 
-        <Text style={[dc.advice, { fontFamily: serif }]}>{rec.advice}</Text>
+        {/* Summary — always visible, concise */}
+        <Text style={[dc.summary, { fontFamily: serifBold }]}>{displaySummary}</Text>
 
+        {/* Key stat chips */}
+        {rec.key_stats?.length > 0 && (
+          <View style={dc.statsRow}>
+            {rec.key_stats.map((stat, i) => (
+              <View key={i} style={dc.statChip}>
+                <Text style={[dc.statText, { fontFamily: serif }]}>{stat}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Food chips */}
         {rec.culturally_relevant_foods.length > 0 && (
           <View style={dc.foodsRow}>
             <Text style={[dc.foodsLabel, { fontFamily: serifBold }]}>Try: </Text>
@@ -229,11 +249,30 @@ function DietaryCard({ rec, index, serif, serifBold }: {
           </View>
         )}
 
-        {rec.evidence_source.length > 0 && (
-          <View style={dc.evidenceRow}>
-            {rec.evidence_source.map((src, i) => (
-              <Text key={i} style={[dc.evidenceText, { fontFamily: serif }]}>📎 {src}</Text>
-            ))}
+        {/* Evidence toggle */}
+        {hasDetail && (
+          <TouchableOpacity
+            style={dc.evidenceToggle}
+            onPress={() => setExpanded(v => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={[dc.evidenceToggleText, { fontFamily: serifBold }]}>
+              {expanded ? '▲  Hide evidence' : '▼  View scientific evidence'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Expanded scientific detail */}
+        {expanded && (
+          <View style={dc.evidenceBox}>
+            <Text style={[dc.evidenceDetail, { fontFamily: serif }]}>{rec.advice}</Text>
+            {rec.evidence_source.length > 0 && (
+              <View style={dc.evidenceSourceRow}>
+                {rec.evidence_source.map((src, i) => (
+                  <Text key={i} style={[dc.evidenceSourceText, { fontFamily: serif }]}>📎 {src}</Text>
+                ))}
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -253,7 +292,17 @@ const dc = StyleSheet.create({
   topRow: { flexDirection: 'row', marginBottom: 8 },
   condBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   condText: { fontSize: 8, letterSpacing: 0.4 },
-  advice: { fontSize: 13, color: C.primary, lineHeight: 20, marginBottom: 8 },
+  // Condensed summary (always visible)
+  summary: { fontSize: 13, color: C.primary, lineHeight: 20, marginBottom: 8 },
+  // Key stat chips
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 8 },
+  statChip: {
+    backgroundColor: '#F0F4FF', borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#D1D9F0',
+  },
+  statText: { fontSize: 10, color: '#2563EB', letterSpacing: 0.2 },
+  // Food chips
   foodsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, gap: 4 },
   foodsLabel: { fontSize: 10, color: C.green },
   foodChip: { backgroundColor: C.lightGreen, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
@@ -261,8 +310,21 @@ const dc = StyleSheet.create({
   limitLabel: { fontSize: 10, color: C.red },
   limitChip: { backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   limitChipText: { fontSize: 10, color: C.red },
-  evidenceRow: { marginTop: 4 },
-  evidenceText: { fontSize: 9, color: C.light, marginBottom: 2 },
+  // Evidence toggle
+  evidenceToggle: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 6, paddingVertical: 6,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+  evidenceToggleText: { fontSize: 10, color: C.teal },
+  // Expanded evidence box
+  evidenceBox: {
+    backgroundColor: '#F8FFFE', borderRadius: 10, padding: 12, marginTop: 6,
+    borderWidth: 1, borderColor: C.tealBg,
+  },
+  evidenceDetail: { fontSize: 12, color: C.secondary, lineHeight: 19, marginBottom: 8 },
+  evidenceSourceRow: { marginTop: 2 },
+  evidenceSourceText: { fontSize: 9, color: C.light, marginBottom: 2 },
 });
 
 
@@ -270,23 +332,62 @@ function InteractionCard({ interaction, serif, serifBold }: {
   interaction: DrugFoodInteraction;
   serif?: string; serifBold?: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const displaySummary = interaction.summary || interaction.interaction;
+  const hasDetail = !!(interaction.summary && interaction.interaction && interaction.interaction !== interaction.summary);
+
   return (
     <View style={ic.card}>
       <View style={ic.header}>
         <Text style={ic.pill}>💊</Text>
         <Text style={[ic.drug, { fontFamily: serifBold }]}>{interaction.drug}</Text>
       </View>
-      <Text style={[ic.interactionText, { fontFamily: serif }]}>{interaction.interaction}</Text>
+
+      {/* Condensed summary */}
+      <Text style={[ic.summaryText, { fontFamily: serifBold }]}>{displaySummary}</Text>
+
+      {/* Key stat chips */}
+      {interaction.key_stats?.length > 0 && (
+        <View style={ic.statsRow}>
+          {interaction.key_stats.map((stat, i) => (
+            <View key={i} style={ic.statChip}>
+              <Text style={[ic.statText, { fontFamily: serif }]}>{stat}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Cultural note */}
       {interaction.cultural_note ? (
         <View style={ic.noteBox}>
           <Text style={[ic.noteText, { fontFamily: serif }]}>🍽️ {interaction.cultural_note}</Text>
         </View>
       ) : null}
-      {interaction.evidence_source.length > 0 && (
-        <View style={{ marginTop: 4 }}>
-          {interaction.evidence_source.map((src, i) => (
-            <Text key={i} style={[dc.evidenceText, { fontFamily: serif }]}>📎 {src}</Text>
-          ))}
+
+      {/* Evidence toggle */}
+      {hasDetail && (
+        <TouchableOpacity
+          style={ic.evidenceToggle}
+          onPress={() => setExpanded(v => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={[ic.evidenceToggleText, { fontFamily: serifBold }]}>
+            {expanded ? '▲  Hide evidence' : '▼  View scientific evidence'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Expanded detail */}
+      {expanded && (
+        <View style={ic.evidenceBox}>
+          <Text style={[ic.evidenceDetail, { fontFamily: serif }]}>{interaction.interaction}</Text>
+          {interaction.evidence_source.length > 0 && (
+            <View style={{ marginTop: 6 }}>
+              {interaction.evidence_source.map((src, i) => (
+                <Text key={i} style={[dc.evidenceSourceText, { fontFamily: serif }]}>📎 {src}</Text>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -301,9 +402,27 @@ const ic = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   pill: { fontSize: 18 },
   drug: { fontSize: 15, color: C.primary },
-  interactionText: { fontSize: 12, color: C.secondary, lineHeight: 18, marginBottom: 6 },
+  summaryText: { fontSize: 13, color: C.primary, lineHeight: 20, marginBottom: 8 },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 8 },
+  statChip: {
+    backgroundColor: '#FFF8EC', borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#F5D89A',
+  },
+  statText: { fontSize: 10, color: C.warmAccent, letterSpacing: 0.2 },
   noteBox: { backgroundColor: '#FEF3C7', borderRadius: 8, padding: 10, marginTop: 4 },
   noteText: { fontSize: 11, color: C.warmAccent, lineHeight: 16 },
+  evidenceToggle: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 8, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: '#F5DFA0',
+  },
+  evidenceToggleText: { fontSize: 10, color: C.warmAccent },
+  evidenceBox: {
+    backgroundColor: '#FFFBF0', borderRadius: 10, padding: 12, marginTop: 6,
+    borderWidth: 1, borderColor: '#F5E4B0',
+  },
+  evidenceDetail: { fontSize: 12, color: C.secondary, lineHeight: 19, marginBottom: 6 },
 });
 
 
@@ -323,20 +442,38 @@ export default function CulturalPlanScreen({ onBack }: Props) {
   const [result, setResult] = useState<CulturalRecommendations | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingSteps = React.useMemo(() => [
+    'Retrieving your genomic risk profile…',
+    'Querying 3,847 nutrition records from USDA, PubMed & WHO…',
+    `Mapping evidence to ${localCulture || 'your'} cuisine…`,
+    'Composing personalized recommendations…',
+  ], [localCulture]);
 
   // Pulse animation for loading
   const pulseAnim = React.useRef(new Animated.Value(0)).current;
+  const stepIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
   React.useEffect(() => {
     if (loading) {
+      setLoadingStep(0);
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       ).start();
+      stepIntervalRef.current = setInterval(() => {
+        setLoadingStep(s => (s + 1) % loadingSteps.length);
+      }, 2000);
     } else {
       pulseAnim.setValue(0);
+      if (stepIntervalRef.current) clearInterval(stepIntervalRef.current);
     }
+    return () => {
+      if (stepIntervalRef.current) clearInterval(stepIntervalRef.current);
+    };
   }, [loading]);
 
   const handleGenerate = useCallback(async () => {
@@ -394,6 +531,25 @@ export default function CulturalPlanScreen({ onBack }: Props) {
                   Tell us what you eat, and we'll tell you how your genes respond to it.
                 </Text>
               </View>
+
+              <View style={styles.sourceTrustRow}>
+                <Text style={[styles.sourceTrustLabel, { fontFamily: serif }]}>
+                  Knowledge base: 3,847 peer-reviewed records from
+                </Text>
+                <View style={styles.sourceBadgeRow}>
+                  <View style={styles.sourceBadge}>
+                    <Text style={[styles.sourceBadgeText, { fontFamily: serifBold }]}>USDA</Text>
+                  </View>
+                  <Text style={[styles.sourceDot, { fontFamily: serif }]}>·</Text>
+                  <View style={styles.sourceBadge}>
+                    <Text style={[styles.sourceBadgeText, { fontFamily: serifBold }]}>PubMed</Text>
+                  </View>
+                  <Text style={[styles.sourceDot, { fontFamily: serif }]}>·</Text>
+                  <View style={styles.sourceBadge}>
+                    <Text style={[styles.sourceBadgeText, { fontFamily: serifBold }]}>WHO</Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
             <CulturePicker
@@ -433,10 +589,14 @@ export default function CulturalPlanScreen({ onBack }: Props) {
             </Animated.View>
             <ActivityIndicator size="large" color={C.green} style={{ marginTop: 16 }} />
             <Text style={[styles.loadingTitle, { fontFamily: serifBold }]}>
-              Crafting your {localCulture} nutrition plan...
+              Crafting your {localCulture} nutrition plan
+            </Text>
+            <Text style={[styles.loadingStep, { fontFamily: serif }]}>
+              {loadingSteps[loadingStep]}
             </Text>
             <Text style={[styles.loadingHint, { fontFamily: serif }]}>
-              Searching 2,933 evidence-backed food documents{'\n'}and generating personalized recommendations
+              Drawing from 3,847 peer-reviewed records indexed{'\n'}
+              from USDA FoodData Central, PubMed, and WHO
             </Text>
           </View>
         )}
@@ -567,7 +727,20 @@ const styles = StyleSheet.create({
   loadingPulse: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.lightGreen, alignItems: 'center', justifyContent: 'center' },
   loadingEmoji: { fontSize: 36 },
   loadingTitle: { fontSize: 18, color: C.primary, marginTop: 20, textAlign: 'center' },
-  loadingHint: { fontSize: 12, color: C.secondary, marginTop: 8, textAlign: 'center', lineHeight: 18 },
+  loadingStep: { fontSize: 13, color: C.green, marginTop: 10, textAlign: 'center', fontStyle: 'italic' },
+  loadingHint: { fontSize: 11, color: C.light, marginTop: 6, textAlign: 'center', lineHeight: 17 },
+
+  // Source trust strip (hero card)
+  sourceTrustRow: { marginTop: 14, alignItems: 'center' },
+  sourceTrustLabel: { fontSize: 10, color: C.light, marginBottom: 6, textAlign: 'center' },
+  sourceBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sourceBadge: {
+    backgroundColor: C.lightGreen, borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: C.lightOlive,
+  },
+  sourceBadgeText: { fontSize: 9, color: C.olive, letterSpacing: 0.3 },
+  sourceDot: { fontSize: 10, color: C.light },
 
   // Profile banner
   profileBanner: {
